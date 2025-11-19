@@ -1,0 +1,23 @@
+{
+  "expo": {
+    "name": "Halteres",
+    "slug": "halteres-mobile",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "userInterfaceStyle": "automatic",
+    "scheme": "halteres",
+    "backgroundColor": "#020817",
+    "assetBundlePatterns": ["**/*"],
+    "ios": {
+      "supportsTablet": true,
+      "bundleIdentifier": "com.halteres.mobile"
+    },
+    "android": {
+      "package": "com.halteres.mobile"
+    },
+    "plugins": ["expo-router"],
+    "experiments": {
+      "typedRoutes": true
+    }
+  }
+}
