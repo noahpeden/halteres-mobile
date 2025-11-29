@@ -1,6 +1,29 @@
 /**
  * Copy this file to: app/utils/supabase/mobile.js in your halteres.ai backend
  * This adds bearer token support while keeping cookie auth for web
+ *
+ * IMPORTANT: Authentication Pattern for Mobile Compatibility
+ * ==========================================================
+ * When checking authentication in API routes that receive requests from mobile:
+ *
+ * ❌ DON'T use getSession() - it doesn't work with bearer tokens:
+ *    const { data: { session } } = await supabase.auth.getSession();
+ *
+ * ✅ DO use getUser() - it works with both cookies and bearer tokens:
+ *    const { data: { user }, error } = await supabase.auth.getUser();
+ *
+ * Example API route pattern:
+ * ```js
+ * export async function POST(req) {
+ *   const supabase = await createMobileCompatibleClient(req);
+ *   const { data: { user }, error: authError } = await supabase.auth.getUser();
+ *
+ *   if (authError || !user) {
+ *     return NextResponse.json({ error: 'Not authenticated' }, { status: 401 });
+ *   }
+ *   // ... rest of handler
+ * }
+ * ```
  */
 
 const { createServerClient } = require("@supabase/ssr");

@@ -87,6 +87,18 @@ export function useWorkout(workoutId: string) {
   ) => {
     if (!workoutId) return { success: false, error: "No workout ID" };
 
+    // Store previous state for rollback
+    const previousWorkout = workout;
+
+    // Optimistically update local state
+    if (workout) {
+      setWorkout({
+        ...workout,
+        ...updates,
+        updated_at: new Date().toISOString(),
+      });
+    }
+
     try {
       const { error: updateError } = await supabase
         .from("program_workouts")
@@ -99,6 +111,10 @@ export function useWorkout(workoutId: string) {
       if (updateError) throw updateError;
       return { success: true };
     } catch (err: unknown) {
+      // Rollback on error
+      if (previousWorkout) {
+        setWorkout(previousWorkout);
+      }
       const errorMessage =
         err instanceof Error ? err.message : "Failed to update workout";
       console.error("Error updating workout:", err);
@@ -111,12 +127,25 @@ export function useWorkout(workoutId: string) {
     if (!workout) return { success: false, error: "No workout loaded" };
 
     const newCompleted = !workout.completed;
+    const newCompletedAt = newCompleted ? new Date().toISOString() : undefined;
+
+    // Store previous state for rollback
+    const previousWorkout = workout;
+
+    // Optimistically update local state
+    setWorkout({
+      ...workout,
+      completed: newCompleted,
+      completed_at: newCompletedAt,
+      updated_at: new Date().toISOString(),
+    });
+
     try {
       const { error: updateError } = await supabase
         .from("program_workouts")
         .update({
           completed: newCompleted,
-          completed_at: newCompleted ? new Date().toISOString() : null,
+          completed_at: newCompletedAt || null,
           updated_at: new Date().toISOString(),
         })
         .eq("id", workoutId);
@@ -124,6 +153,8 @@ export function useWorkout(workoutId: string) {
       if (updateError) throw updateError;
       return { success: true, completed: newCompleted };
     } catch (err: unknown) {
+      // Rollback on error
+      setWorkout(previousWorkout);
       const errorMessage =
         err instanceof Error ? err.message : "Failed to update workout";
       console.error("Error toggling completion:", err);
