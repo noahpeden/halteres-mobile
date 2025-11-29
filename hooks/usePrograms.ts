@@ -3,6 +3,30 @@ import { supabase } from "@/lib/supabase/client";
 import { apiClient } from "@/lib/api/client";
 import type { ProgramInput } from "@/lib/validations/program.schema";
 
+// JSON field types for program data
+export type CalendarData = {
+  start_date?: string;
+  end_date?: string;
+  duration_weeks?: number;
+  days_per_week?: number;
+  days_of_week?: number[];
+  days_of_week_names?: string[];
+};
+
+export type GymDetails = {
+  gym_type?: string;
+  equipment?: (string | number)[];
+};
+
+export type Periodization = {
+  program_type?: string;
+};
+
+export type SessionDetails = {
+  duration?: number;
+  duration_minutes?: number;
+};
+
 export type Program = {
   id: string;
   name: string;
@@ -16,6 +40,16 @@ export type Program = {
   goal?: string;
   difficulty?: string;
   entity_id?: string;
+  training_methodology?: string;
+  reference_input?: string;
+  focus_area?: string;
+  start_date?: string;
+  end_date?: string;
+  workout_format?: string[];
+  calendar_data?: CalendarData;
+  gym_details?: GymDetails;
+  periodization?: Periodization;
+  session_details?: SessionDetails;
 };
 
 export function usePrograms() {
@@ -84,8 +118,11 @@ export function useCreateProgram() {
 
   return useMutation({
     mutationFn: async (data: ProgramInput) => {
-      console.log("[useCreateProgram] Starting program creation with data:", data);
-      
+      console.log(
+        "[useCreateProgram] Starting program creation with data:",
+        data,
+      );
+
       const {
         data: { user },
       } = await supabase.auth.getUser();
@@ -103,7 +140,7 @@ export function useCreateProgram() {
 
       // Get today's date in ISO format for start date
       const today = new Date().toISOString().split("T")[0];
-      
+
       // Calculate end date
       const endDate = new Date(today);
       endDate.setDate(endDate.getDate() + data.duration_weeks * 7 - 1);
@@ -139,7 +176,10 @@ export function useCreateProgram() {
         },
       };
 
-      console.log("[useCreateProgram] Inserting program into Supabase:", programData);
+      console.log(
+        "[useCreateProgram] Inserting program into Supabase:",
+        programData,
+      );
 
       const { data: program, error } = await supabase
         .from("programs")

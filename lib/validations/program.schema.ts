@@ -12,10 +12,13 @@ export const programSchema = z.object({
 
 export type ProgramInput = z.infer<typeof programSchema>;
 
+export const entityTypeEnum = z.enum(["CLIENT", "CLASS"]);
+
 export const clientSchema = z.object({
-  name: z.string().min(1, "Client name is required"),
-  email: z.string().email("Invalid email address"),
+  name: z.string().min(1, "Name is required"),
+  type: entityTypeEnum.default("CLIENT"),
   notes: z.string().optional(),
 });
 
+export type EntityType = z.infer<typeof entityTypeEnum>;
 export type ClientInput = z.infer<typeof clientSchema>;

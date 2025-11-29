@@ -1,6 +1,6 @@
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useRouter } from "expo-router";
-import { ArrowLeft, ChevronDown } from "lucide-react-native";
+import { ArrowLeft, ChevronDown, Plus } from "lucide-react-native";
 import { useState } from "react";
 import { Controller, useForm } from "react-hook-form";
 import {
@@ -12,18 +12,21 @@ import {
   TouchableOpacity,
   View,
 } from "react-native";
-import { SafeAreaView } from "react-native-safe-area-context";
 import {
   Button,
+  Divider,
   HelperText,
   Menu,
   Text,
   TextInput,
   useTheme,
 } from "react-native-paper";
+import { SafeAreaView } from "react-native-safe-area-context";
+import { AddClientModal } from "@/components/dashboard/AddClientModal";
 import { useClients } from "@/hooks/useClients";
 import { useCreateProgram } from "@/hooks/usePrograms";
 import {
+  type EntityType,
   type ProgramInput,
   programSchema,
 } from "@/lib/validations/program.schema";
@@ -32,12 +35,27 @@ export default function CreateProgramScreen() {
   const router = useRouter();
   const theme = useTheme();
   const createProgram = useCreateProgram();
-  const { data: clients, isLoading: clientsLoading } = useClients();
-  
+  const { data: clients, isLoading: clientsLoading, refetch } = useClients();
+
   const [isLoading, setIsLoading] = useState(false);
   const [selectedClientId, setSelectedClientId] = useState<string | null>(null);
   const [selectedClientName, setSelectedClientName] = useState<string>("");
   const [clientMenuVisible, setClientMenuVisible] = useState(false);
+  const [showAddClientModal, setShowAddClientModal] = useState(false);
+
+  // Group clients by type (matching web app's optgroup pattern)
+  const clientsByType = clients?.reduce(
+    (acc, client) => {
+      const type = client.type || "CLIENT";
+      if (!acc[type]) acc[type] = [];
+      acc[type].push(client);
+      return acc;
+    },
+    {} as Record<string, typeof clients>,
+  );
+
+  const clientList = clientsByType?.CLIENT || [];
+  const classList = clientsByType?.CLASS || [];
 
   const {
     control,
@@ -61,6 +79,22 @@ export default function CreateProgramScreen() {
     setClientMenuVisible(false);
   };
 
+  const handleCreateNewEntity = () => {
+    setClientMenuVisible(false);
+    setShowAddClientModal(true);
+  };
+
+  const handleEntityCreated = (entity: {
+    id: string;
+    name: string;
+    type: EntityType;
+  }) => {
+    // Refetch clients list and auto-select the newly created entity
+    refetch().then(() => {
+      handleSelectClient(entity.id, entity.name);
+    });
+  };
+
   const onSubmit = async (data: ProgramInput) => {
     try {
       setIsLoading(true);
@@ -81,8 +115,11 @@ export default function CreateProgramScreen() {
     } catch (error) {
       console.error("[CreateProgram] Error caught:", error);
       console.error("[CreateProgram] Error type:", typeof error);
-      console.error("[CreateProgram] Error details:", JSON.stringify(error, null, 2));
-      
+      console.error(
+        "[CreateProgram] Error details:",
+        JSON.stringify(error, null, 2),
+      );
+
       let errorMessage = "Failed to create program";
       if (error instanceof Error) {
         errorMessage = error.message;
@@ -90,7 +127,7 @@ export default function CreateProgramScreen() {
         // Handle Supabase error format
         errorMessage = JSON.stringify(error);
       }
-      
+
       Alert.alert("Error", errorMessage);
     } finally {
       setIsLoading(false);
@@ -171,22 +208,76 @@ export default function CreateProgramScreen() {
                     >
                       {selectedClientName || "Select a client or class"}
                     </Text>
-                    <ChevronDown size={20} color={theme.colors.onSurfaceVariant} />
+                    <ChevronDown
+                      size={20}
+                      color={theme.colors.onSurfaceVariant}
+                    />
                   </TouchableOpacity>
                 }
               >
                 {clientsLoading ? (
                   <Menu.Item title="Loading..." disabled />
-                ) : clients && clients.length > 0 ? (
-                  clients.map((client) => (
-                    <Menu.Item
-                      key={client.id}
-                      onPress={() => handleSelectClient(client.id, client.name)}
-                      title={client.name}
-                    />
-                  ))
                 ) : (
-                  <Menu.Item title="No clients found" disabled />
+                  <>
+                    {/* Create New Option */}
+                    <Menu.Item
+                      leadingIcon={() => (
+                        <Plus size={20} color={theme.colors.primary} />
+                      )}
+                      onPress={handleCreateNewEntity}
+                      title="Create New Client/Class"
+                      titleStyle={{ color: theme.colors.primary }}
+                    />
+                    <Divider />
+
+                    {/* Clients Group */}
+                    {clientList.length > 0 && (
+                      <>
+                        <Menu.Item
+                          title="— Clients —"
+                          disabled
+                          titleStyle={styles.menuGroupTitle}
+                        />
+                        {clientList.map((client) => (
+                          <Menu.Item
+                            key={client.id}
+                            onPress={() =>
+                              handleSelectClient(client.id, client.name)
+                            }
+                            title={client.name}
+                          />
+                        ))}
+                      </>
+                    )}
+
+                    {/* Classes Group */}
+                    {classList.length > 0 && (
+                      <>
+                        <Menu.Item
+                          title="— Classes —"
+                          disabled
+                          titleStyle={styles.menuGroupTitle}
+                        />
+                        {classList.map((classEntity) => (
+                          <Menu.Item
+                            key={classEntity.id}
+                            onPress={() =>
+                              handleSelectClient(
+                                classEntity.id,
+                                classEntity.name,
+                              )
+                            }
+                            title={classEntity.name}
+                          />
+                        ))}
+                      </>
+                    )}
+
+                    {/* Empty State */}
+                    {clientList.length === 0 && classList.length === 0 && (
+                      <Menu.Item title="No clients or classes yet" disabled />
+                    )}
+                  </>
                 )}
               </Menu>
               {!selectedClientId && (
@@ -203,89 +294,87 @@ export default function CreateProgramScreen() {
               }}
               pointerEvents={selectedClientId ? "auto" : "none"}
             >
-
-            <Controller
-              control={control}
-              name="name"
-              render={({ field: { onChange, onBlur, value } }) => (
-                <View style={styles.inputContainer}>
-                  <TextInput
-                    label="Program Name"
-                    placeholder="e.g., 12-Week Strength Builder"
-                    value={value}
-                    onChangeText={onChange}
-                    onBlur={onBlur}
-                    error={!!errors.name}
-                    autoCapitalize="words"
-                    mode="outlined"
-                    style={styles.input}
-                  />
-                  <HelperText type="error" visible={!!errors.name}>
-                    {errors.name?.message}
-                  </HelperText>
-                </View>
-              )}
-            />
-
-            <Controller
-              control={control}
-              name="description"
-              render={({ field: { onChange, onBlur, value } }) => (
-                <View style={styles.inputContainer}>
-                  <TextInput
-                    label="Description (Optional)"
-                    placeholder="Describe the program goals and focus..."
-                    value={value}
-                    onChangeText={onChange}
-                    onBlur={onBlur}
-                    error={!!errors.description}
-                    multiline
-                    numberOfLines={4}
-                    mode="outlined"
-                    style={[styles.input, styles.textArea]}
-                  />
-                  <HelperText type="error" visible={!!errors.description}>
-                    {errors.description?.message}
-                  </HelperText>
-                </View>
-              )}
-            />
-
-            <Controller
-              control={control}
-              name="duration_weeks"
-              render={({ field: { onChange, onBlur, value } }) => (
-                <View style={styles.inputContainer}>
-                  <TextInput
-                    label="Duration (Weeks)"
-                    placeholder="4"
-                    value={value?.toString()}
-                    onChangeText={(text) => {
-                      const num = Number.parseInt(text, 10);
-                      if (!Number.isNaN(num)) {
-                        onChange(num);
-                      } else if (text === "") {
-                        onChange(0);
-                      }
-                    }}
-                    onBlur={onBlur}
-                    error={!!errors.duration_weeks}
-                    keyboardType="number-pad"
-                    mode="outlined"
-                    style={styles.input}
-                  />
-                  <HelperText type="error" visible={!!errors.duration_weeks}>
-                    {errors.duration_weeks?.message}
-                  </HelperText>
-                  {!errors.duration_weeks && (
-                    <HelperText type="info" visible={true}>
-                      Maximum 8 weeks per program
+              <Controller
+                control={control}
+                name="name"
+                render={({ field: { onChange, onBlur, value } }) => (
+                  <View style={styles.inputContainer}>
+                    <TextInput
+                      label="Program Name"
+                      placeholder="e.g., 12-Week Strength Builder"
+                      value={value}
+                      onChangeText={onChange}
+                      onBlur={onBlur}
+                      error={!!errors.name}
+                      autoCapitalize="words"
+                      mode="outlined"
+                      style={styles.input}
+                    />
+                    <HelperText type="error" visible={!!errors.name}>
+                      {errors.name?.message}
                     </HelperText>
-                  )}
-                </View>
-              )}
-            />
+                  </View>
+                )}
+              />
 
+              <Controller
+                control={control}
+                name="description"
+                render={({ field: { onChange, onBlur, value } }) => (
+                  <View style={styles.inputContainer}>
+                    <TextInput
+                      label="Description (Optional)"
+                      placeholder="Describe the program goals and focus..."
+                      value={value}
+                      onChangeText={onChange}
+                      onBlur={onBlur}
+                      error={!!errors.description}
+                      multiline
+                      numberOfLines={4}
+                      mode="outlined"
+                      style={[styles.input, styles.textArea]}
+                    />
+                    <HelperText type="error" visible={!!errors.description}>
+                      {errors.description?.message}
+                    </HelperText>
+                  </View>
+                )}
+              />
+
+              <Controller
+                control={control}
+                name="duration_weeks"
+                render={({ field: { onChange, onBlur, value } }) => (
+                  <View style={styles.inputContainer}>
+                    <TextInput
+                      label="Duration (Weeks)"
+                      placeholder="4"
+                      value={value?.toString()}
+                      onChangeText={(text) => {
+                        const num = Number.parseInt(text, 10);
+                        if (!Number.isNaN(num)) {
+                          onChange(num);
+                        } else if (text === "") {
+                          onChange(0);
+                        }
+                      }}
+                      onBlur={onBlur}
+                      error={!!errors.duration_weeks}
+                      keyboardType="number-pad"
+                      mode="outlined"
+                      style={styles.input}
+                    />
+                    <HelperText type="error" visible={!!errors.duration_weeks}>
+                      {errors.duration_weeks?.message}
+                    </HelperText>
+                    {!errors.duration_weeks && (
+                      <HelperText type="info" visible={true}>
+                        Maximum 8 weeks per program
+                      </HelperText>
+                    )}
+                  </View>
+                )}
+              />
             </View>
 
             <View style={styles.buttonContainer}>
@@ -312,6 +401,13 @@ export default function CreateProgramScreen() {
           </View>
         </ScrollView>
       </KeyboardAvoidingView>
+
+      {/* Add Client/Class Modal */}
+      <AddClientModal
+        visible={showAddClientModal}
+        onClose={() => setShowAddClientModal(false)}
+        onSuccess={handleEntityCreated}
+      />
     </SafeAreaView>
   );
 }
@@ -376,6 +472,11 @@ const styles = StyleSheet.create({
   },
   selectButtonText: {
     fontSize: 16,
+  },
+  menuGroupTitle: {
+    fontSize: 12,
+    fontWeight: "600",
+    opacity: 0.6,
   },
   buttonContainer: {
     gap: 12,

@@ -35,14 +35,17 @@ export class ApiClient {
 
   async post<T>(endpoint: string, data?: any): Promise<T> {
     const headers = await this.getAuthHeader();
-    
+
     console.log(`[ApiClient] POST ${API_BASE}${endpoint}`);
-    console.log(`[ApiClient] Request body:`, JSON.stringify(data).substring(0, 200));
-    
+    console.log(
+      `[ApiClient] Request body:`,
+      JSON.stringify(data).substring(0, 200),
+    );
+
     // Add timeout
     const controller = new AbortController();
     const timeoutId = setTimeout(() => controller.abort(), 30000); // 30 second timeout
-    
+
     try {
       const response = await fetch(`${API_BASE}${endpoint}`, {
         method: "POST",
@@ -50,9 +53,9 @@ export class ApiClient {
         body: JSON.stringify(data),
         signal: controller.signal,
       });
-      
+
       clearTimeout(timeoutId);
-      
+
       console.log(`[ApiClient] Response status: ${response.status}`);
       console.log(`[ApiClient] Response headers:`, response.headers);
 
@@ -67,8 +70,8 @@ export class ApiClient {
       return json;
     } catch (error) {
       clearTimeout(timeoutId);
-      if (error instanceof Error && error.name === 'AbortError') {
-        throw new Error('Request timed out after 30 seconds');
+      if (error instanceof Error && error.name === "AbortError") {
+        throw new Error("Request timed out after 30 seconds");
       }
       throw error;
     }

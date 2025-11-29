@@ -3,8 +3,9 @@ import { router } from "expo-router";
 import { useState } from "react";
 import { Controller, useForm } from "react-hook-form";
 import { Alert, StyleSheet, View } from "react-native";
-import { Button, HelperText, Text, TextInput } from "react-native-paper";
+import { Button, HelperText, TextInput } from "react-native-paper";
 import { z } from "zod";
+import { GoogleSignIn } from "@/components/auth/GoogleSignIn";
 import { useAuth } from "@/hooks/useAuth";
 
 const loginSchema = z.object({
@@ -115,6 +116,8 @@ export function LoginForm() {
       >
         Sign In
       </Button>
+
+      <GoogleSignIn />
     </View>
   );
 }

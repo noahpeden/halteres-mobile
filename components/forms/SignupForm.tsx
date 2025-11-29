@@ -5,6 +5,7 @@ import { Controller, useForm } from "react-hook-form";
 import { Alert, StyleSheet, View } from "react-native";
 import { Button, HelperText, TextInput } from "react-native-paper";
 import { z } from "zod";
+import { GoogleSignIn } from "@/components/auth/GoogleSignIn";
 import { useAuth } from "@/hooks/useAuth";
 
 const signupSchema = z
@@ -145,6 +146,8 @@ export function SignupForm() {
       >
         Create Account
       </Button>
+
+      <GoogleSignIn />
     </View>
   );
 }
