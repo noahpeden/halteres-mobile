@@ -24,6 +24,7 @@ import ResultEntryForm from "@/components/athlete/ResultEntryForm";
 import LeaderboardView from "@/components/athlete/LeaderboardView";
 import PRCelebration from "@/components/athlete/PRCelebration";
 import AIFeedbackCard from "@/components/athlete/AIFeedbackCard";
+import { TemplateFeedbackButton, ResultFeedbackCard } from "@/components/feedback";
 
 type Tab = "workout" | "log" | "leaderboard";
 
@@ -277,6 +278,14 @@ export default function WorkoutDetailScreen() {
             <Text variant="bodyMedium" style={styles.description}>
               {workout.description || "No description provided."}
             </Text>
+            {/* Template Feedback */}
+            <View style={styles.templateFeedbackContainer}>
+              <TemplateFeedbackButton
+                workoutId={id || ""}
+                gymId={currentGym?.id}
+                showStats
+              />
+            </View>
           </Surface>
 
           {/* Exercises */}
@@ -349,6 +358,18 @@ export default function WorkoutDetailScreen() {
           {userResult && (
             <View style={styles.feedbackContainer}>
               <AIFeedbackCard workoutResultId={userResult.id} />
+            </View>
+          )}
+
+          {/* Self-Assessment Feedback */}
+          {userResult && user?.id && (
+            <View style={styles.feedbackContainer}>
+              <ResultFeedbackCard
+                workoutResultId={userResult.id}
+                resultOwnerId={user.id}
+                currentUserId={user.id}
+                gymId={currentGym?.id}
+              />
             </View>
           )}
 
@@ -499,6 +520,12 @@ const styles = StyleSheet.create({
   description: {
     lineHeight: 22,
     color: "#333",
+  },
+  templateFeedbackContainer: {
+    marginTop: 12,
+    paddingTop: 12,
+    borderTopWidth: 1,
+    borderTopColor: "#e0e0e0",
   },
   exerciseItem: {
     flexDirection: "row",

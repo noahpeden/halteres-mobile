@@ -32,6 +32,7 @@ import {
 import { SafeAreaView } from "react-native-safe-area-context";
 
 import { EnhanceWorkoutModal } from "@/components/workouts/EnhanceWorkoutModal";
+import { TemplateFeedbackButton } from "@/components/feedback";
 import { useProgramDataMobile } from "@/hooks/useProgramDataMobile";
 import { useWorkout } from "@/hooks/useWorkout";
 
@@ -377,6 +378,15 @@ export default function WorkoutDetailScreen() {
                   </View>
                 )}
 
+                {/* Feedback Button */}
+                <View style={styles.feedbackContainer}>
+                  <TemplateFeedbackButton
+                    workoutId={workoutId || ""}
+                    gymId={program?.gym_id}
+                    showStats
+                  />
+                </View>
+
                 <Divider style={styles.divider} />
 
                 <Text variant="bodyLarge" style={styles.body} selectable>
@@ -558,6 +568,10 @@ const styles = StyleSheet.create({
   },
   tag: {
     height: 28,
+  },
+  feedbackContainer: {
+    marginVertical: 12,
+    alignItems: "flex-start",
   },
   divider: {
     marginVertical: 16,
