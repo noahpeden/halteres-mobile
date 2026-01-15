@@ -36,7 +36,7 @@ type TabValue = "config" | "generate";
 
 export default function ProgramBuilderScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
-  const { program, isLoading: programLoading } = useProgramDataMobile(id);
+  const { program, loading: programLoading } = useProgramDataMobile(id);
   const { workouts, refetch: refetchWorkouts } = useProgramWorkoutsMobile(id);
   const {
     isGenerating,
@@ -89,7 +89,7 @@ export default function ProgramBuilderScreen() {
         goal: program.goal || "",
         difficulty: program.difficulty || "",
         focusArea: program.focus_area || "",
-        personalization: program.personalization || "",
+        personalization: (program as any).personalization || "",
         referenceInput: program.reference_input || "",
         workoutFormats: program.workout_format || [],
         programType: program.periodization?.program_type || "",
@@ -97,15 +97,16 @@ export default function ProgramBuilderScreen() {
         startDate: program.calendar_data?.start_date || undefined,
         endDate: program.calendar_data?.end_date || undefined,
         sessionDetails: program.session_details || undefined,
-        programOverview: program.program_overview || undefined,
+        programOverview: (program as any).program_overview || undefined,
         gymDetails: program.gym_details || undefined,
       });
 
       // Convert equipment labels to IDs
       if (program.gym_details?.equipment) {
         const equipmentIds = program.gym_details.equipment
-          .map((label: string) => {
-            const item = equipmentList.find((eq) => eq.label === label);
+          .map((label) => {
+            const labelStr = String(label);
+            const item = equipmentList.find((eq) => eq.label === labelStr);
             return item?.value;
           })
           .filter((id): id is number => id !== undefined);

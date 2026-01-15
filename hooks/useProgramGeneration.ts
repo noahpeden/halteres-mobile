@@ -2,14 +2,10 @@ import { useState, useRef, useCallback } from "react";
 import { supabase } from "@/lib/supabase/client";
 import { createSSEClientWithPost } from "@/lib/api/sseClient";
 import { equipmentList, dayNameToNumber } from "@/lib/constants/programConfig";
+import { API_BASE } from "@/lib/api/getApiUrl";
 
-// Debug: Log what Expo sees for the env var
-console.log(
-  "[Generation] EXPO_PUBLIC_API_URL from env:",
-  process.env.EXPO_PUBLIC_API_URL,
-);
-
-const API_BASE = process.env.EXPO_PUBLIC_API_URL || "https://halteres.ai";
+// Debug: Log the resolved API URL
+console.log("[Generation] Resolved API_BASE:", API_BASE);
 const MAX_RETRIES = 2;
 const RETRY_DELAY = 3000;
 
@@ -71,7 +67,7 @@ export function useProgramGeneration(programId: string) {
   const [duration, setDuration] = useState(0);
 
   const abortControllerRef = useRef<AbortController | null>(null);
-  const timerRef = useRef<NodeJS.Timeout | null>(null);
+  const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
   const clearStreamingWorkouts = useCallback(() => {
     setStreamingWorkouts([]);

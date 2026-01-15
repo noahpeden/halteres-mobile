@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useState } from "react";
 import { supabase } from "@/lib/supabase/client";
+import { API_BASE } from "@/lib/api/getApiUrl";
 import type { Workout } from "./useProgramWorkoutsMobile";
 
 type EnhancedWorkout = {
@@ -199,12 +200,7 @@ export function useWorkout(workoutId: string) {
         return { success: false, error: "Not authenticated" };
       }
 
-      const apiUrl = process.env.EXPO_PUBLIC_API_URL;
-      if (!apiUrl) {
-        return { success: false, error: "API URL not configured" };
-      }
-
-      const response = await fetch(`${apiUrl}/api/enhance-workout`, {
+      const response = await fetch(`${API_BASE}/api/enhance-workout`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",

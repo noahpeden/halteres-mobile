@@ -2,6 +2,20 @@
 
 This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 
+## CRITICAL: Cross-Platform Parity Rule
+
+**Any feature, component, or functionality added to this mobile app MUST also be implemented in the web app (halteres.ai), and vice versa.**
+
+This includes:
+- New screens/pages
+- New components
+- API integrations and hooks
+- Database schema changes
+- Form fields and validation
+- Business logic
+
+When making changes, always check both codebases and ensure feature parity. The web app is located at `../halteres.ai/`.
+
 ## Development Commands
 
 ### Core Commands

@@ -1,24 +1,51 @@
 import { useRouter } from "expo-router";
-import { FileText, Sparkles, Users } from "lucide-react-native";
+import {
+	ChevronRight,
+	Dumbbell,
+	Plus,
+	Sparkles,
+	Users,
+} from "lucide-react-native";
 import { useState } from "react";
 import {
+  Alert,
+  Pressable,
   RefreshControl,
   ScrollView,
   StyleSheet,
-  TouchableOpacity,
   View,
 } from "react-native";
+import Animated, {
+  FadeInDown,
+  FadeInUp,
+  useAnimatedStyle,
+  useSharedValue,
+  withSpring,
+} from "react-native-reanimated";
 import { SafeAreaView } from "react-native-safe-area-context";
-import { ActivityIndicator, Card, Text, useTheme } from "react-native-paper";
+import { ActivityIndicator, Button, Text, useTheme } from "react-native-paper";
 import { AddClientModal } from "@/components/dashboard/AddClientModal";
+import { EditClientModal } from "@/components/dashboard/EditClientModal";
 import { ClientCard } from "@/components/dashboard/ClientCard";
 import { ProgramCard } from "@/components/dashboard/ProgramCard";
 import { useDashboardDataMobile } from "@/hooks/useDashboardDataMobile";
+import {
+  useDeleteClient,
+  useUpdateClient,
+  type Client,
+  type ClientMetrics,
+} from "@/hooks/useClients";
+import { brandColors } from "@/app/_layout";
+import type { EntityType } from "@/lib/validations/program.schema";
+
+const AnimatedPressable = Animated.createAnimatedComponent(Pressable);
 
 export default function DashboardScreen() {
   const router = useRouter();
   const theme = useTheme();
   const [showAddClient, setShowAddClient] = useState(false);
+  const [showEditClient, setShowEditClient] = useState(false);
+  const [selectedClient, setSelectedClient] = useState<Client | null>(null);
 
   const {
     programs,
@@ -27,6 +54,9 @@ export default function DashboardScreen() {
     isLoading,
     refetch,
   } = useDashboardDataMobile();
+
+  const updateClient = useUpdateClient();
+  const deleteClient = useDeleteClient();
 
   const [refreshing, setRefreshing] = useState(false);
 
@@ -41,166 +71,291 @@ export default function DashboardScreen() {
     router.push("/(app)/programs/create");
   };
 
+  const handleEditClient = (client: Client) => {
+    setSelectedClient(client);
+    setShowEditClient(true);
+  };
+
+  const handleUpdateClient = async (data: {
+    name: string;
+    type: EntityType;
+    metrics?: ClientMetrics;
+  }) => {
+    if (!selectedClient) return;
+
+    try {
+      await updateClient.mutateAsync({
+        id: selectedClient.id,
+        data,
+      });
+      setShowEditClient(false);
+      setSelectedClient(null);
+      refetch();
+    } catch (error) {
+      Alert.alert("Error", "Failed to update client");
+      throw error;
+    }
+  };
+
+  const handleDeleteClient = (client: Client) => {
+    Alert.alert(
+      `Delete ${client.type === "CLIENT" ? "Client" : "Class"}?`,
+      `Are you sure you want to delete "${client.name}"? This action cannot be undone.`,
+      [
+        { text: "Cancel", style: "cancel" },
+        {
+          text: "Delete",
+          style: "destructive",
+          onPress: async () => {
+            try {
+              await deleteClient.mutateAsync(client.id);
+              refetch();
+            } catch (error) {
+              Alert.alert("Error", "Failed to delete client");
+            }
+          },
+        },
+      ]
+    );
+  };
+
   const recentPrograms = programs?.slice(0, 3) || [];
   const recentClients = clients?.slice(0, 3) || [];
+
+  // Animation for quick action cards
+  const createProgramScale = useSharedValue(1);
+  const addClientScale = useSharedValue(1);
+
+  const createProgramStyle = useAnimatedStyle(() => ({
+    transform: [{ scale: createProgramScale.value }],
+  }));
+
+  const addClientStyle = useAnimatedStyle(() => ({
+    transform: [{ scale: addClientScale.value }],
+  }));
 
   return (
     <SafeAreaView
       style={[styles.container, { backgroundColor: theme.colors.background }]}
     >
       {/* Header - Fixed at top */}
-      <View
+      <Animated.View
+        entering={FadeInDown.duration(400).delay(100)}
         style={[
           styles.header,
           {
             backgroundColor: theme.colors.surface,
-            borderColor: theme.colors.outlineVariant,
           },
         ]}
       >
-        <Text variant="headlineMedium" style={styles.headerTitle}>
-          Coach Dashboard
-        </Text>
-        <Text
-          variant="bodyMedium"
-          style={{ color: theme.colors.onSurfaceVariant }}
-        >
-          Manage your programs and track client progress
-        </Text>
-      </View>
+        <View style={styles.headerContent}>
+          <View>
+            <Text variant="headlineMedium" style={styles.headerTitle}>
+              Coach Dashboard
+            </Text>
+            <Text
+              variant="bodyMedium"
+              style={{ color: theme.colors.onSurfaceVariant }}
+            >
+              Manage your programs and track client progress
+            </Text>
+          </View>
+        </View>
+      </Animated.View>
 
       <ScrollView
         style={styles.scrollView}
         contentContainerStyle={styles.scrollContent}
+        showsVerticalScrollIndicator={false}
         refreshControl={
           <RefreshControl
             refreshing={refreshing}
             onRefresh={onRefresh}
             tintColor={theme.colors.primary}
+            colors={[theme.colors.primary]}
           />
         }
       >
         {/* Quick Actions */}
-        <View style={styles.section}>
+        <Animated.View
+          entering={FadeInUp.duration(400).delay(200)}
+          style={styles.section}
+        >
           <Text variant="titleLarge" style={styles.sectionTitle}>
             Quick Actions
           </Text>
           <View style={styles.quickActionsContainer}>
-            <TouchableOpacity
+            <AnimatedPressable
               onPress={handleCreateProgram}
-              style={styles.quickAction}
+              onPressIn={() => {
+                createProgramScale.value = withSpring(0.96, {
+                  damping: 15,
+                  stiffness: 300,
+                });
+              }}
+              onPressOut={() => {
+                createProgramScale.value = withSpring(1, {
+                  damping: 15,
+                  stiffness: 150,
+                });
+              }}
+              style={[styles.quickAction, createProgramStyle]}
             >
-              <Card style={styles.card}>
-                <Card.Content style={styles.quickActionContent}>
-                  <View
-                    style={[
-                      styles.iconContainer,
-                      { backgroundColor: theme.colors.primaryContainer },
-                    ]}
-                  >
-                    <Sparkles size={24} color={theme.colors.primary} />
-                  </View>
-                  <Text variant="labelLarge" style={styles.quickActionText}>
+              <View style={[styles.quickActionCard, styles.primaryActionCard]}>
+                <View style={styles.quickActionIconLarge}>
+                  <Sparkles
+                    size={32}
+                    color={brandColors.smartBlue.DEFAULT}
+                    strokeWidth={2}
+                  />
+                </View>
+                <View style={styles.quickActionTextContainer}>
+                  <Text variant="titleMedium" style={styles.quickActionTitle}>
                     Create Program
                   </Text>
-                </Card.Content>
-              </Card>
-            </TouchableOpacity>
+                  <Text variant="bodySmall" style={styles.quickActionSubtitle}>
+                    AI-powered workout plans
+                  </Text>
+                </View>
+                <ChevronRight
+                  size={20}
+                  color={brandColors.practicalGray.light}
+                />
+              </View>
+            </AnimatedPressable>
 
-            <TouchableOpacity
+            <AnimatedPressable
               onPress={() => setShowAddClient(true)}
-              style={styles.quickAction}
+              onPressIn={() => {
+                addClientScale.value = withSpring(0.96, {
+                  damping: 15,
+                  stiffness: 300,
+                });
+              }}
+              onPressOut={() => {
+                addClientScale.value = withSpring(1, {
+                  damping: 15,
+                  stiffness: 150,
+                });
+              }}
+              style={[styles.quickAction, addClientStyle]}
             >
-              <Card style={styles.card}>
-                <Card.Content style={styles.quickActionContent}>
-                  <View
-                    style={[
-                      styles.iconContainer,
-                      { backgroundColor: theme.colors.tertiaryContainer },
-                    ]}
-                  >
-                    <Users size={24} color={theme.colors.tertiary} />
-                  </View>
-                  <Text variant="labelLarge" style={styles.quickActionText}>
+              <View
+                style={[styles.quickActionCard, styles.secondaryActionCard]}
+              >
+                <View
+                  style={[
+                    styles.quickActionIconLarge,
+                    { backgroundColor: brandColors.thrivingGreen.container },
+                  ]}
+                >
+                  <Users
+                    size={32}
+                    color={brandColors.thrivingGreen.DEFAULT}
+                    strokeWidth={2}
+                  />
+                </View>
+                <View style={styles.quickActionTextContainer}>
+                  <Text variant="titleMedium" style={styles.quickActionTitle}>
                     Add Client
                   </Text>
-                </Card.Content>
-              </Card>
-            </TouchableOpacity>
+                  <Text variant="bodySmall" style={styles.quickActionSubtitle}>
+                    New athlete or class
+                  </Text>
+                </View>
+                <ChevronRight
+                  size={20}
+                  color={brandColors.practicalGray.light}
+                />
+              </View>
+            </AnimatedPressable>
           </View>
-        </View>
+        </Animated.View>
 
         {/* Stats Overview */}
-        <View style={styles.section}>
+        <Animated.View
+          entering={FadeInUp.duration(400).delay(300)}
+          style={styles.section}
+        >
           <Text variant="titleLarge" style={styles.sectionTitle}>
             Overview
           </Text>
           <View style={styles.statsContainer}>
-            <Card style={[styles.card, styles.statCard]}>
-              <Card.Content>
-                <View style={styles.statHeader}>
-                  <Text
-                    variant="labelMedium"
-                    style={{ color: theme.colors.onSurfaceVariant }}
-                  >
-                    Total Programs
-                  </Text>
-                  <View
-                    style={[
-                      styles.miniIcon,
-                      { backgroundColor: theme.colors.primaryContainer },
-                    ]}
-                  >
-                    <FileText size={16} color={theme.colors.primary} />
-                  </View>
-                </View>
-                <Text variant="headlineMedium" style={styles.statValue}>
-                  {stats.totalPrograms}
-                </Text>
-              </Card.Content>
-            </Card>
+            {/* Programs Stat */}
+            <View style={[styles.statCard, styles.statCardBlue]}>
+              <View style={styles.statIconContainer}>
+                <Dumbbell
+                  size={24}
+                  color={brandColors.smartBlue.DEFAULT}
+                  strokeWidth={2}
+                />
+              </View>
+              <Text
+                variant="displaySmall"
+                style={[
+                  styles.statValue,
+                  { color: brandColors.smartBlue.dark },
+                ]}
+              >
+                {stats.totalPrograms}
+              </Text>
+              <Text variant="labelMedium" style={styles.statLabel}>
+                Total Programs
+              </Text>
+            </View>
 
-            <Card style={[styles.card, styles.statCard]}>
-              <Card.Content>
-                <View style={styles.statHeader}>
-                  <Text
-                    variant="labelMedium"
-                    style={{ color: theme.colors.onSurfaceVariant }}
-                  >
-                    Active Clients
-                  </Text>
-                  <View
-                    style={[
-                      styles.miniIcon,
-                      { backgroundColor: theme.colors.secondaryContainer },
-                    ]}
-                  >
-                    <Users size={16} color={theme.colors.secondary} />
-                  </View>
-                </View>
-                <Text variant="headlineMedium" style={styles.statValue}>
-                  {clients?.length || 0}
-                </Text>
-              </Card.Content>
-            </Card>
+            {/* Clients Stat */}
+            <View style={[styles.statCard, styles.statCardGreen]}>
+              <View
+                style={[
+                  styles.statIconContainer,
+                  { backgroundColor: brandColors.thrivingGreen.lightest },
+                ]}
+              >
+                <Users
+                  size={24}
+                  color={brandColors.thrivingGreen.DEFAULT}
+                  strokeWidth={2}
+                />
+              </View>
+              <Text
+                variant="displaySmall"
+                style={[
+                  styles.statValue,
+                  { color: brandColors.thrivingGreen.dark },
+                ]}
+              >
+                {clients?.length || 0}
+              </Text>
+              <Text variant="labelMedium" style={styles.statLabel}>
+                Active Clients
+              </Text>
+            </View>
           </View>
-        </View>
+        </Animated.View>
 
         {/* Recent Programs */}
-        <View style={styles.section}>
+        <Animated.View
+          entering={FadeInUp.duration(400).delay(400)}
+          style={styles.section}
+        >
           <View style={styles.sectionHeader}>
             <Text variant="titleLarge" style={styles.sectionTitle}>
               Recent Programs
             </Text>
             {programs && programs.length > 3 && (
-              <TouchableOpacity onPress={() => router.push("/(app)/programs")}>
+              <Pressable
+                onPress={() => router.push("/(app)/programs")}
+                style={styles.viewAllButton}
+              >
                 <Text
                   variant="labelLarge"
                   style={{ color: theme.colors.primary }}
                 >
                   View All
                 </Text>
-              </TouchableOpacity>
+                <ChevronRight size={16} color={theme.colors.primary} />
+              </Pressable>
             )}
           </View>
 
@@ -209,50 +364,63 @@ export default function DashboardScreen() {
               <ActivityIndicator size="large" color={theme.colors.primary} />
             </View>
           ) : recentPrograms.length > 0 ? (
-            recentPrograms.map((program) => (
-              <ProgramCard key={program.id} program={program} />
+            recentPrograms.map((program, index) => (
+              <Animated.View
+                key={program.id}
+                entering={FadeInUp.duration(300).delay(450 + index * 100)}
+              >
+                <ProgramCard program={program} />
+              </Animated.View>
             ))
           ) : (
-            <Card style={styles.card}>
-              <Card.Content style={styles.emptyStateContent}>
-                <FileText size={48} color={theme.colors.outline} />
-                <Text
-                  variant="bodyMedium"
-                  style={[
-                    styles.emptyStateText,
-                    { color: theme.colors.onSurfaceVariant },
-                  ]}
-                >
-                  No programs yet. Create your first program to get started!
-                </Text>
-                <TouchableOpacity onPress={handleCreateProgram}>
-                  <Text
-                    variant="labelLarge"
-                    style={{ color: theme.colors.primary }}
-                  >
-                    + Create Program
-                  </Text>
-                </TouchableOpacity>
-              </Card.Content>
-            </Card>
+            <View style={styles.emptyStateCard}>
+              <View style={styles.emptyStateIconContainer}>
+                <Dumbbell
+                  size={40}
+                  color={brandColors.practicalGray.light}
+                  strokeWidth={1.5}
+                />
+              </View>
+              <Text variant="titleMedium" style={styles.emptyStateTitle}>
+                No programs yet
+              </Text>
+              <Text variant="bodyMedium" style={styles.emptyStateText}>
+                Create your first AI-powered program to get started!
+              </Text>
+              <Button
+                mode="contained"
+                onPress={handleCreateProgram}
+                icon={() => <Plus size={18} color="#fff" />}
+                style={styles.emptyStateButton}
+              >
+                Create Program
+              </Button>
+            </View>
           )}
-        </View>
+        </Animated.View>
 
         {/* Recent Clients */}
-        <View style={styles.section}>
+        <Animated.View
+          entering={FadeInUp.duration(400).delay(500)}
+          style={styles.section}
+        >
           <View style={styles.sectionHeader}>
             <Text variant="titleLarge" style={styles.sectionTitle}>
               Recent Clients
             </Text>
             {clients && clients.length > 3 && (
-              <TouchableOpacity onPress={() => router.push("/(app)/clients")}>
+              <Pressable
+                onPress={() => router.push("/(app)/clients")}
+                style={styles.viewAllButton}
+              >
                 <Text
                   variant="labelLarge"
                   style={{ color: theme.colors.primary }}
                 >
                   View All
                 </Text>
-              </TouchableOpacity>
+                <ChevronRight size={16} color={theme.colors.primary} />
+              </Pressable>
             )}
           </View>
 
@@ -261,40 +429,72 @@ export default function DashboardScreen() {
               <ActivityIndicator size="large" color={theme.colors.primary} />
             </View>
           ) : recentClients.length > 0 ? (
-            recentClients.map((client) => (
-              <ClientCard key={client.id} client={client} />
+            recentClients.map((client, index) => (
+              <Animated.View
+                key={client.id}
+                entering={FadeInUp.duration(300).delay(550 + index * 100)}
+              >
+                <ClientCard
+                  client={client}
+                  onPress={() => router.push(`/(app)/clients/${client.id}`)}
+                  onEdit={() => handleEditClient(client)}
+                  onDelete={() => handleDeleteClient(client)}
+                />
+              </Animated.View>
             ))
           ) : (
-            <Card style={styles.card}>
-              <Card.Content style={styles.emptyStateContent}>
-                <Users size={48} color={theme.colors.outline} />
-                <Text
-                  variant="bodyMedium"
-                  style={[
-                    styles.emptyStateText,
-                    { color: theme.colors.onSurfaceVariant },
-                  ]}
-                >
-                  No clients yet. Add your first client to get started!
-                </Text>
-                <TouchableOpacity onPress={() => setShowAddClient(true)}>
-                  <Text
-                    variant="labelLarge"
-                    style={{ color: theme.colors.primary }}
-                  >
-                    + Add Client
-                  </Text>
-                </TouchableOpacity>
-              </Card.Content>
-            </Card>
+            <View style={styles.emptyStateCard}>
+              <View
+                style={[
+                  styles.emptyStateIconContainer,
+                  { backgroundColor: brandColors.thrivingGreen.container },
+                ]}
+              >
+                <Users
+                  size={40}
+                  color={brandColors.thrivingGreen.light}
+                  strokeWidth={1.5}
+                />
+              </View>
+              <Text variant="titleMedium" style={styles.emptyStateTitle}>
+                No clients yet
+              </Text>
+              <Text variant="bodyMedium" style={styles.emptyStateText}>
+                Add your first client or class to get started!
+              </Text>
+              <Button
+                mode="contained"
+                onPress={() => setShowAddClient(true)}
+                icon={() => <Plus size={18} color="#fff" />}
+                style={[
+                  styles.emptyStateButton,
+                  { backgroundColor: brandColors.thrivingGreen.DEFAULT },
+                ]}
+              >
+                Add Client
+              </Button>
+            </View>
           )}
-        </View>
+        </Animated.View>
       </ScrollView>
 
       {/* Add Client Modal */}
       <AddClientModal
         visible={showAddClient}
         onClose={() => setShowAddClient(false)}
+      />
+
+      {/* Edit Client Modal */}
+      <EditClientModal
+        visible={showEditClient}
+        onClose={() => {
+          setShowEditClient(false);
+          setSelectedClient(null);
+        }}
+        onSubmit={handleUpdateClient}
+        client={selectedClient}
+        isSubmitting={updateClient.isPending}
+        mode="edit"
       />
     </SafeAreaView>
   );
@@ -305,89 +505,173 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   header: {
-    paddingHorizontal: 24,
-    paddingVertical: 16,
-    borderBottomWidth: 1,
+    paddingHorizontal: 20,
+    paddingVertical: 20,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.05,
+    shadowRadius: 8,
+    elevation: 2,
+  },
+  headerContent: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
   },
   headerTitle: {
     fontWeight: "700",
     marginBottom: 4,
+    color: "#121212",
   },
   scrollView: {
     flex: 1,
   },
   scrollContent: {
-    paddingHorizontal: 24,
+    paddingHorizontal: 20,
     paddingTop: 24,
-    paddingBottom: 48,
+    paddingBottom: 100,
   },
   section: {
-    marginBottom: 24,
+    marginBottom: 28,
   },
   sectionHeader: {
     flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "center",
-    marginBottom: 12,
+    marginBottom: 16,
   },
   sectionTitle: {
-    fontWeight: "600",
-    marginBottom: 12,
+    fontWeight: "700",
+    color: "#121212",
   },
-  quickActionsContainer: {
+  viewAllButton: {
     flexDirection: "row",
+    alignItems: "center",
+    gap: 4,
+  },
+  // Quick Actions - New Design
+  quickActionsContainer: {
     gap: 12,
   },
   quickAction: {
     flex: 1,
   },
-  card: {
-    backgroundColor: "white",
-  },
-  quickActionContent: {
-    padding: 20,
+  quickActionCard: {
+    flexDirection: "row",
     alignItems: "center",
+    padding: 16,
+    borderRadius: 16,
+    backgroundColor: "#ffffff",
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.06,
+    shadowRadius: 8,
+    elevation: 3,
   },
-  iconContainer: {
-    padding: 12,
-    borderRadius: 12,
-    marginBottom: 8,
+  primaryActionCard: {
+    borderLeftWidth: 4,
+    borderLeftColor: brandColors.smartBlue.DEFAULT,
   },
-  quickActionText: {
-    fontWeight: "600",
-    textAlign: "center",
+  secondaryActionCard: {
+    borderLeftWidth: 4,
+    borderLeftColor: brandColors.thrivingGreen.DEFAULT,
   },
+  quickActionIconLarge: {
+    width: 56,
+    height: 56,
+    borderRadius: 14,
+    backgroundColor: brandColors.smartBlue.container,
+    alignItems: "center",
+    justifyContent: "center",
+    marginRight: 16,
+  },
+  quickActionTextContainer: {
+    flex: 1,
+  },
+  quickActionTitle: {
+    fontWeight: "700",
+    color: "#121212",
+    marginBottom: 2,
+  },
+  quickActionSubtitle: {
+    color: brandColors.practicalGray.DEFAULT,
+  },
+  // Stats - New Design
   statsContainer: {
     flexDirection: "row",
     gap: 12,
   },
   statCard: {
     flex: 1,
-  },
-  statHeader: {
-    flexDirection: "row",
-    justifyContent: "space-between",
+    padding: 20,
+    borderRadius: 16,
     alignItems: "center",
-    marginBottom: 8,
   },
-  miniIcon: {
-    padding: 8,
-    borderRadius: 8,
+  statCardBlue: {
+    backgroundColor: brandColors.smartBlue.container,
+  },
+  statCardGreen: {
+    backgroundColor: brandColors.thrivingGreen.container,
+  },
+  statCardOrange: {
+    backgroundColor: brandColors.helpfulOrange.container,
+  },
+  statIconContainer: {
+    width: 48,
+    height: 48,
+    borderRadius: 12,
+    backgroundColor: brandColors.smartBlue.lightest,
+    alignItems: "center",
+    justifyContent: "center",
+    marginBottom: 12,
   },
   statValue: {
-    fontWeight: "bold",
+    fontWeight: "800",
+    marginBottom: 4,
   },
+  statLabel: {
+    color: brandColors.practicalGray.medium,
+    fontWeight: "500",
+  },
+  // Loading
   loadingContainer: {
     alignItems: "center",
-    paddingVertical: 32,
+    paddingVertical: 40,
   },
-  emptyStateContent: {
-    padding: 24,
+  // Empty States - New Design
+  emptyStateCard: {
+    backgroundColor: "#ffffff",
+    borderRadius: 20,
+    padding: 32,
     alignItems: "center",
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.05,
+    shadowRadius: 12,
+    elevation: 2,
+  },
+  emptyStateIconContainer: {
+    width: 80,
+    height: 80,
+    borderRadius: 20,
+    backgroundColor: brandColors.smartBlue.container,
+    alignItems: "center",
+    justifyContent: "center",
+    marginBottom: 20,
+  },
+  emptyStateTitle: {
+    fontWeight: "700",
+    color: "#121212",
+    marginBottom: 8,
   },
   emptyStateText: {
     textAlign: "center",
-    marginTop: 12,
-    marginBottom: 16,
+    color: brandColors.practicalGray.DEFAULT,
+    marginBottom: 24,
+    lineHeight: 22,
+  },
+  emptyStateButton: {
+    borderRadius: 12,
+    paddingHorizontal: 8,
   },
 });

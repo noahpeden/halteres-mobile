@@ -1,11 +1,15 @@
 import { useEffect, useState } from "react";
 import { supabase } from "@/lib/supabase/client";
+import type { GenerationStatus } from "@/lib/types/twoPhaseGeneration";
 
 export type Workout = {
   id: string;
   program_id: string;
   title: string;
-  body: string;
+  body: string | null;
+  body_skeleton?: string | null;
+  generation_status?: GenerationStatus;
+  week_number?: number;
   tags?: string[];
   scheduled_date?: string;
   is_reference: boolean;

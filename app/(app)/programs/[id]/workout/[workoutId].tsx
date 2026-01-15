@@ -183,7 +183,7 @@ export default function WorkoutDetailScreen() {
       .filter(Boolean);
 
     const result = await enhanceWorkout({
-      workout: { title: workout.title, description: workout.body },
+      workout: { title: workout.title, description: workout.body || workout.body_skeleton || "" },
       instructions,
       methodology: program.training_methodology || "",
       gymEquipment: equipmentArray.length > 0 ? equipmentArray : ["Bodyweight"],
@@ -471,7 +471,7 @@ export default function WorkoutDetailScreen() {
         isEnhancing={isEnhancing}
         enhancedWorkout={enhancedWorkout}
         originalTitle={workout.title}
-        originalBody={workout.body}
+        originalBody={workout.body || workout.body_skeleton || ""}
       />
     </SafeAreaView>
   );

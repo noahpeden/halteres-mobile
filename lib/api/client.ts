@@ -1,6 +1,5 @@
 import { supabase } from "@/lib/supabase/client";
-
-const API_BASE = process.env.EXPO_PUBLIC_API_URL || "https://halteres.ai";
+import { API_BASE } from "@/lib/api/getApiUrl";
 
 export class ApiClient {
   private async getAuthHeader(): Promise<HeadersInit> {

@@ -7,17 +7,67 @@
     "userInterfaceStyle": "automatic",
     "scheme": "halteres",
     "backgroundColor": "#020817",
-    "assetBundlePatterns": ["**/*"],
+    "icon": "./assets/icon.png",
+    "splash": {
+      "image": "./assets/splash.png",
+      "resizeMode": "contain",
+      "backgroundColor": "#020817"
+    },
+    "assetBundlePatterns": [
+      "**/*"
+    ],
     "ios": {
       "supportsTablet": true,
-      "bundleIdentifier": "com.halteres.mobile"
+      "bundleIdentifier": "com.halteres.mobile",
+      "buildNumber": "1",
+      "infoPlist": {
+        "NSCameraUsageDescription": "Halteres needs camera access to let you take photos for your workout logs and profile.",
+        "NSPhotoLibraryUsageDescription": "Halteres needs photo library access to let you add images to your workout logs and profile.",
+        "NSPhotoLibraryAddUsageDescription": "Halteres needs permission to save photos to your library."
+      },
+      "config": {
+        "usesNonExemptEncryption": false
+      }
     },
     "android": {
-      "package": "com.halteres.mobile"
+      "package": "com.halteres.mobile",
+      "versionCode": 1,
+      "adaptiveIcon": {
+        "foregroundImage": "./assets/adaptive-icon.png",
+        "backgroundColor": "#020817"
+      },
+      "permissions": [
+        "CAMERA",
+        "READ_EXTERNAL_STORAGE",
+        "WRITE_EXTERNAL_STORAGE"
+      ]
     },
-    "plugins": ["expo-router"],
+    "plugins": [
+      "expo-router",
+      [
+        "expo-splash-screen",
+        {
+          "backgroundColor": "#020817",
+          "image": "./assets/splash.png",
+          "imageWidth": 200
+        }
+      ]
+    ],
     "experiments": {
       "typedRoutes": true
+    },
+    "extra": {
+      "eas": {
+        "projectId": "e003d31a-f530-43e5-9ba1-1dab658e120e"
+      },
+      "router": {}
+    },
+    "owner": "noahpeden",
+    "runtimeVersion": {
+      "policy": "appVersion"
+    },
+    "updates": {
+      "url": ""
     }
   }
 }

@@ -11,16 +11,20 @@ import {
   useTheme,
 } from "react-native-paper";
 import { useProgramDataMobile } from "@/hooks/useProgramDataMobile";
-import { useProgramGeneration } from "@/hooks/useProgramGeneration";
+import { useTwoPhaseGeneration } from "@/hooks/useTwoPhaseGeneration";
 import { useProgramWorkoutsMobile } from "@/hooks/useProgramWorkoutsMobile";
+import { useEnhanceProgram, type EnhancedWorkout } from "@/hooks/useEnhanceProgram";
 import {
   equipmentList,
   gymEquipmentPresets,
 } from "@/lib/constants/programConfig";
 import { supabase } from "@/lib/supabase/client";
+import type { TwoPhaseWorkout } from "@/lib/types/twoPhaseGeneration";
 
+import { EnhanceProgramModal } from "./EnhanceProgramModal";
 import { GenerationConfirmModal } from "./GenerationConfirmModal";
-import { GenerationProgress } from "./GenerationProgress";
+import { TwoPhaseProgress } from "./TwoPhaseProgress";
+import { SkeletonPreview } from "./SkeletonPreview";
 import { ProgramDetailsSection } from "./ProgramDetailsSection";
 import { ProgramEssentials } from "./ProgramEssentials";
 import { ProgramScheduling } from "./ProgramScheduling";
@@ -85,22 +89,37 @@ export function AIProgramWriter({ programId }: AIProgramWriterProps) {
     loading: workoutsLoading,
     refetch: refetchWorkouts,
   } = useProgramWorkoutsMobile(programId);
+  // Two-phase generation hook
   const {
-    isGenerating,
     stage,
-    progress,
-    streamingWorkouts,
     error: generationError,
     duration,
-    generateProgram,
+    isGenerating,
+    isSkeletonComplete,
+    skeletonProgress,
+    skeletonWorkouts,
+    enhancementProgress,
+    enhancingWeek,
+    weekNotes,
+    setWeekNote,
+    generateSkeleton,
+    enhanceWeek,
+    enhanceAllRemaining,
     cancel: cancelGeneration,
-  } = useProgramGeneration(programId);
+  } = useTwoPhaseGeneration(programId);
+
+  // State for showing skeleton preview vs workout list
+  const [showSkeletonPreview, setShowSkeletonPreview] = useState(false);
+
+  // Enhancement hook
+  const { saveEnhancedWorkouts } = useEnhanceProgram();
 
   // Form state
   const [formState, setFormState] = useState<FormState>(defaultFormState);
   const [isDirty, setIsDirty] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
   const [showConfirmModal, setShowConfirmModal] = useState(false);
+  const [showEnhanceModal, setShowEnhanceModal] = useState(false);
   const [snackbarMessage, setSnackbarMessage] = useState("");
 
   // Initialize form state from program data
@@ -329,6 +348,24 @@ export function AIProgramWriter({ programId }: AIProgramWriterProps) {
     setShowConfirmModal(true);
   }, []);
 
+  // Handle enhance
+  const handleEnhanceClick = useCallback(() => {
+    setShowEnhanceModal(true);
+  }, []);
+
+  const handleSaveEnhancedWorkouts = useCallback(
+    async (enhancedWorkouts: EnhancedWorkout[]) => {
+      const success = await saveEnhancedWorkouts(enhancedWorkouts);
+      if (success) {
+        setSnackbarMessage("Workouts enhanced successfully");
+        refetchWorkouts();
+      } else {
+        setSnackbarMessage("Failed to save enhanced workouts");
+      }
+    },
+    [saveEnhancedWorkouts, refetchWorkouts],
+  );
+
   const handleConfirmGeneration = useCallback(async () => {
     setShowConfirmModal(false);
 
@@ -354,14 +391,66 @@ export function AIProgramWriter({ programId }: AIProgramWriterProps) {
       entityId: formState.entityId,
     };
 
-    const isRegeneration = workouts.length > 0;
-    const result = await generateProgram(formData, isRegeneration);
+    // Use two-phase skeleton generation
+    const result = await generateSkeleton(formData);
 
     if (result.success) {
-      setSnackbarMessage(`Created ${result.workoutsCreated} workouts`);
+      setSnackbarMessage(`Created ${result.workoutsCreated} workout skeletons`);
+      setShowSkeletonPreview(true);
       refetchWorkouts();
     }
-  }, [formState, workouts.length, generateProgram, refetchWorkouts]);
+  }, [formState, generateSkeleton, refetchWorkouts]);
+
+  // Handle week enhancement
+  const handleEnhanceWeek = useCallback(
+    async (weekNumber: number, workoutIds: string[]) => {
+      const equipmentNames = formState.equipment
+        .map((id) => equipmentList.find((e) => e.value === id)?.label)
+        .filter((label): label is string => !!label);
+
+      const result = await enhanceWeek(weekNumber, workoutIds, {
+        goal: formState.goal,
+        difficulty: formState.difficulty,
+        equipment: equipmentNames,
+        trainingMethodology: formState.trainingMethodology,
+      });
+
+      if (result.success) {
+        setSnackbarMessage(`Enhanced Week ${weekNumber} (${result.workoutsCreated} workouts)`);
+        refetchWorkouts();
+      } else {
+        setSnackbarMessage(`Enhancement failed: ${result.error}`);
+      }
+    },
+    [formState, enhanceWeek, refetchWorkouts],
+  );
+
+  // Handle enhance all remaining weeks
+  const handleEnhanceAll = useCallback(async () => {
+    const equipmentNames = formState.equipment
+      .map((id) => equipmentList.find((e) => e.value === id)?.label)
+      .filter((label): label is string => !!label);
+
+    const result = await enhanceAllRemaining({
+      goal: formState.goal,
+      difficulty: formState.difficulty,
+      equipment: equipmentNames,
+      trainingMethodology: formState.trainingMethodology,
+    });
+
+    if (result.success) {
+      setSnackbarMessage(`Enhanced all remaining weeks (${result.workoutsCreated} workouts)`);
+      setShowSkeletonPreview(false);
+      refetchWorkouts();
+    } else {
+      setSnackbarMessage(`Enhancement failed: ${result.error}`);
+    }
+  }, [formState, enhanceAllRemaining, refetchWorkouts]);
+
+  // Handle skeleton preview complete (view program)
+  const handleSkeletonComplete = useCallback(() => {
+    setShowSkeletonPreview(false);
+  }, []);
 
   // Handle workout actions
   const handleDeleteWorkout = useCallback(async (workoutId: string) => {
@@ -451,16 +540,28 @@ export function AIProgramWriter({ programId }: AIProgramWriterProps) {
           )}
         </View>
 
-        {/* Generation Progress */}
-        {isGenerating && (
-          <GenerationProgress
-            stage={stage}
-            progress={progress}
-            streamingWorkouts={streamingWorkouts}
-            duration={duration}
-            error={generationError}
-            onCancel={cancelGeneration}
-            onRetry={handleGenerateClick}
+        {/* Two-Phase Generation Progress */}
+        <TwoPhaseProgress
+          visible={isGenerating}
+          stage={stage}
+          skeletonProgress={skeletonProgress}
+          enhancementProgress={enhancementProgress}
+          duration={duration}
+          error={generationError}
+          onCancel={cancelGeneration}
+          onComplete={() => setShowSkeletonPreview(true)}
+        />
+
+        {/* Skeleton Preview (shown after skeleton generation) */}
+        {showSkeletonPreview && isSkeletonComplete && (
+          <SkeletonPreview
+            workouts={skeletonWorkouts}
+            weekNotes={weekNotes}
+            onWeekNoteChange={setWeekNote}
+            onEnhanceWeek={handleEnhanceWeek}
+            onEnhanceAll={handleEnhanceAll}
+            isEnhancing={stage === "enhancing_week" || stage === "enhancing_all"}
+            enhancingWeek={enhancingWeek}
           />
         )}
 
@@ -531,20 +632,35 @@ export function AIProgramWriter({ programId }: AIProgramWriterProps) {
         </View>
       </ScrollView>
 
-      {/* Generate FAB */}
-      <FAB
-        icon={workouts.length > 0 ? "refresh" : "play"}
-        label={workouts.length > 0 ? "Regenerate" : "Generate"}
-        onPress={handleGenerateClick}
-        disabled={isGenerating}
-        style={[
-          styles.fab,
-          workouts.length > 0 && {
-            backgroundColor: theme.colors.errorContainer,
-          },
-        ]}
-        color={workouts.length > 0 ? theme.colors.error : undefined}
-      />
+      {/* FAB Group */}
+      <View style={styles.fabGroup}>
+        {/* Enhance FAB - only show when workouts exist */}
+        {workouts.length > 0 && (
+          <FAB
+            icon="auto-fix"
+            label="Enhance"
+            onPress={handleEnhanceClick}
+            disabled={isGenerating}
+            style={[styles.fab, styles.enhanceFab]}
+            color={theme.colors.primary}
+          />
+        )}
+
+        {/* Generate FAB */}
+        <FAB
+          icon={workouts.length > 0 ? "refresh" : "play"}
+          label={workouts.length > 0 ? "Regenerate" : "Generate"}
+          onPress={handleGenerateClick}
+          disabled={isGenerating}
+          style={[
+            styles.fab,
+            workouts.length > 0 && {
+              backgroundColor: theme.colors.errorContainer,
+            },
+          ]}
+          color={workouts.length > 0 ? theme.colors.error : undefined}
+        />
+      </View>
 
       {/* Generation Confirm Modal */}
       <GenerationConfirmModal
@@ -554,6 +670,23 @@ export function AIProgramWriter({ programId }: AIProgramWriterProps) {
         existingWorkoutCount={workouts.length}
         onConfirm={handleConfirmGeneration}
         onCancel={() => setShowConfirmModal(false)}
+      />
+
+      {/* Enhance Program Modal */}
+      <EnhanceProgramModal
+        visible={showEnhanceModal}
+        workouts={workouts}
+        formData={{
+          name: formState.name,
+          trainingMethodology: formState.trainingMethodology,
+          equipment: formState.equipment
+            .map((id) => equipmentList.find((e) => e.value === id)?.label)
+            .filter((label): label is string => !!label),
+          focusArea: formState.focusArea,
+          workoutFormats: formState.workoutFormats,
+        }}
+        onClose={() => setShowEnhanceModal(false)}
+        onSave={handleSaveEnhancedWorkouts}
       />
 
       {/* Snackbar */}
@@ -629,9 +762,15 @@ const styles = StyleSheet.create({
   workoutCount: {
     opacity: 0.7,
   },
-  fab: {
+  fabGroup: {
     position: "absolute",
     right: 16,
     bottom: 16,
+    gap: 12,
+    alignItems: "flex-end",
+  },
+  fab: {},
+  enhanceFab: {
+    marginBottom: 8,
   },
 });

@@ -1,5 +1,7 @@
 import { Tabs } from "expo-router";
-import { Dumbbell, Home, Settings } from "lucide-react-native";
+import { BarChart3, Building2, Dumbbell, Home, Settings, Users } from "lucide-react-native";
+import { Platform, StyleSheet, View } from "react-native";
+import { brandColors } from "@/app/_layout";
 
 export default function AppLayout() {
   return (
@@ -7,30 +9,111 @@ export default function AppLayout() {
       screenOptions={{
         headerShown: false,
         tabBarStyle: {
-          backgroundColor: "#020817",
-          borderTopColor: "#334155",
-          borderTopWidth: 1,
-          height: 60,
-          paddingBottom: 8,
-          paddingTop: 8,
+          backgroundColor: "#ffffff",
+          borderTopWidth: 0,
+          height: Platform.OS === "ios" ? 88 : 68,
+          paddingBottom: Platform.OS === "ios" ? 28 : 12,
+          paddingTop: 12,
+          // Elevated shadow for depth
+          shadowColor: "#000",
+          shadowOffset: { width: 0, height: -4 },
+          shadowOpacity: 0.08,
+          shadowRadius: 12,
+          elevation: 12,
         },
-        tabBarActiveTintColor: "#3b82f6",
-        tabBarInactiveTintColor: "#64748b",
+        tabBarActiveTintColor: brandColors.smartBlue.DEFAULT,
+        tabBarInactiveTintColor: brandColors.practicalGray.light,
+        tabBarLabelStyle: {
+          fontSize: 11,
+          fontWeight: "600",
+          marginTop: 4,
+        },
+        tabBarItemStyle: {
+          paddingVertical: 4,
+        },
       }}
     >
       <Tabs.Screen
         name="dashboard"
         options={{
           title: "Dashboard",
-          tabBarIcon: ({ color, size }) => <Home color={color} size={size} />,
+          tabBarIcon: ({ color, focused }) => (
+            <View
+              style={[
+                styles.iconContainer,
+                focused && {
+                  backgroundColor: brandColors.smartBlue.container,
+                },
+              ]}
+            >
+              <Home color={color} size={22} strokeWidth={focused ? 2.5 : 2} />
+            </View>
+          ),
         }}
       />
       <Tabs.Screen
         name="programs"
         options={{
           title: "Programs",
-          tabBarIcon: ({ color, size }) => (
-            <Dumbbell color={color} size={size} />
+          tabBarIcon: ({ color, focused }) => (
+            <View
+              style={[
+                styles.iconContainer,
+                focused && {
+                  backgroundColor: brandColors.smartBlue.container,
+                },
+              ]}
+            >
+              <Dumbbell
+                color={color}
+                size={22}
+                strokeWidth={focused ? 2.5 : 2}
+              />
+            </View>
+          ),
+        }}
+      />
+      <Tabs.Screen
+        name="gym"
+        options={{
+          title: "Gym",
+          tabBarIcon: ({ color, focused }) => (
+            <View
+              style={[
+                styles.iconContainer,
+                focused && {
+                  backgroundColor: brandColors.smartBlue.container,
+                },
+              ]}
+            >
+              <Building2
+                color={color}
+                size={22}
+                strokeWidth={focused ? 2.5 : 2}
+              />
+            </View>
+          ),
+        }}
+      />
+      <Tabs.Screen
+        name="analytics"
+        options={{
+          title: "Analytics",
+          tabBarIcon: ({ color, focused }) => (
+            <View
+              style={[
+                styles.iconContainer,
+                focused && {
+                  backgroundColor: brandColors.smartBlue.container,
+                },
+              ]}
+            >
+              <BarChart3
+                color={color}
+                size={22}
+                strokeWidth={focused ? 2.5 : 2}
+              />
+            </View>
           ),
         }}
       />
@@ -38,11 +121,41 @@ export default function AppLayout() {
         name="settings"
         options={{
           title: "Settings",
-          tabBarIcon: ({ color, size }) => (
-            <Settings color={color} size={size} />
+          tabBarIcon: ({ color, focused }) => (
+            <View
+              style={[
+                styles.iconContainer,
+                focused && {
+                  backgroundColor: brandColors.smartBlue.container,
+                },
+              ]}
+            >
+              <Settings
+                color={color}
+                size={22}
+                strokeWidth={focused ? 2.5 : 2}
+              />
+            </View>
           ),
+        }}
+      />
+      {/* Hide clients routes from tab bar - accessed via navigation */}
+      <Tabs.Screen
+        name="clients"
+        options={{
+          href: null,
         }}
       />
     </Tabs>
   );
 }
+
+const styles = StyleSheet.create({
+  iconContainer: {
+    width: 40,
+    height: 32,
+    borderRadius: 16,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+});

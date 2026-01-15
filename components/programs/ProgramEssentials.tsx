@@ -59,8 +59,8 @@ export function ProgramEssentials({
   const [localReferenceInput, setLocalReferenceInput] =
     useState(referenceInput);
 
-  const descriptionTimeoutRef = useRef<NodeJS.Timeout | null>(null);
-  const referenceTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const descriptionTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const referenceTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   // Sync local state with props
   useEffect(() => {

@@ -1,45 +1,118 @@
 import { Stack } from "expo-router";
 import { StatusBar } from "expo-status-bar";
 import { GestureHandlerRootView } from "react-native-gesture-handler";
-import { MD3DarkTheme, MD3LightTheme, PaperProvider } from "react-native-paper";
+import { MD3LightTheme, PaperProvider } from "react-native-paper";
 import { AuthProvider } from "@/components/providers/AuthProvider";
 import { QueryProvider } from "@/components/providers/QueryProvider";
 
-// Custom theme matching brand colors
+// Brand colors from web app (halteres.ai)
+export const brandColors = {
+  // Primary palette - Smart Blue
+  smartBlue: {
+    DEFAULT: "#1771dc",
+    dark: "#134e93",
+    medium: "#1a61b5",
+    light: "#3682de",
+    lightest: "#a5ceff",
+    container: "#deebfd",
+  },
+  // Secondary palette - Helpful Orange
+  helpfulOrange: {
+    DEFAULT: "#ea7f49",
+    dark: "#a75932",
+    medium: "#c06e44",
+    light: "#ed9264",
+    lightest: "#ffd2bb",
+    container: "#fff4ed",
+  },
+  // Accent palette - Thriving Green
+  thrivingGreen: {
+    DEFAULT: "#3c8f73",
+    dark: "#2d6955",
+    medium: "#3d846c",
+    light: "#65a790",
+    lightest: "#bfe8d9",
+    container: "#e8f5f0",
+  },
+  // Warning palette - Never Preachy Peach
+  peach: {
+    DEFAULT: "#ffcc7b",
+    dark: "#bf9147",
+    medium: "#ddad61",
+    light: "#ffd592",
+    lightest: "#ffeed3",
+    container: "#fff8eb",
+  },
+  // Neutral palette - Practical Gray
+  practicalGray: {
+    DEFAULT: "#6f879a",
+    dark: "#35546c",
+    medium: "#526f86",
+    light: "#7995a9",
+    lighter: "#e2e8eb",
+    lightest: "#c4d1db",
+    container: "#f5f7f9",
+  },
+  // Semantic colors
+  error: "#e74444",
+  errorContainer: "#fee2e2",
+  success: "#188038",
+  successContainer: "#d1fae5",
+  // Backgrounds
+  background: "#f9fbff",
+  surface: "#ffffff",
+  surfaceVariant: "#f5f4f0",
+};
+
+// Custom theme matching Halteres brand
 const theme = {
   ...MD3LightTheme,
+  roundness: 12,
   colors: {
     ...MD3LightTheme.colors,
-    primary: "#3b82f6", // blue-600
-    primaryContainer: "#dbeafe", // blue-100
-    secondary: "#64748b", // slate-500
-    secondaryContainer: "#f1f5f9", // slate-100
-    tertiary: "#10b981", // green-500
-    tertiaryContainer: "#d1fae5", // green-100
-    surface: "#ffffff",
-    surfaceVariant: "#f8fafc", // slate-50
-    background: "#f1f5f9", // slate-100
-    error: "#ef4444", // red-500
-    errorContainer: "#fee2e2", // red-100
+    // Primary - Smart Blue
+    primary: brandColors.smartBlue.DEFAULT,
+    primaryContainer: brandColors.smartBlue.container,
     onPrimary: "#ffffff",
-    onPrimaryContainer: "#1e3a8a", // blue-900
+    onPrimaryContainer: brandColors.smartBlue.dark,
+    // Secondary - Helpful Orange
+    secondary: brandColors.helpfulOrange.DEFAULT,
+    secondaryContainer: brandColors.helpfulOrange.container,
     onSecondary: "#ffffff",
-    onSecondaryContainer: "#0f172a", // slate-900
+    onSecondaryContainer: brandColors.helpfulOrange.dark,
+    // Tertiary - Thriving Green
+    tertiary: brandColors.thrivingGreen.DEFAULT,
+    tertiaryContainer: brandColors.thrivingGreen.container,
     onTertiary: "#ffffff",
-    onTertiaryContainer: "#064e3b", // green-900
-    onSurface: "#0f172a", // slate-900
-    onSurfaceVariant: "#64748b", // slate-500
+    onTertiaryContainer: brandColors.thrivingGreen.dark,
+    // Surfaces
+    surface: brandColors.surface,
+    surfaceVariant: brandColors.surfaceVariant,
+    background: brandColors.background,
+    onSurface: "#121212",
+    onSurfaceVariant: brandColors.practicalGray.DEFAULT,
+    onBackground: "#121212",
+    // Error
+    error: brandColors.error,
+    errorContainer: brandColors.errorContainer,
     onError: "#ffffff",
-    onErrorContainer: "#7f1d1d", // red-900
-    onBackground: "#0f172a", // slate-900
-    outline: "#cbd5e1", // slate-300
-    outlineVariant: "#e2e8f0", // slate-200
-    inverseSurface: "#1e293b", // slate-800
-    inverseOnSurface: "#f8fafc", // slate-50
-    inversePrimary: "#60a5fa", // blue-400
+    onErrorContainer: "#7f1d1d",
+    // Outlines
+    outline: brandColors.practicalGray.lightest,
+    outlineVariant: "#eaebed",
+    // Inverse
+    inverseSurface: "#121212",
+    inverseOnSurface: "#f9fbff",
+    inversePrimary: brandColors.smartBlue.light,
+    // Other
     shadow: "#000000",
     scrim: "#000000",
-    backdrop: "rgba(15, 23, 42, 0.4)", // slate-900 with opacity
+    backdrop: "rgba(18, 18, 18, 0.4)",
+    // Custom additions for easy access
+    warning: brandColors.peach.DEFAULT,
+    warningContainer: brandColors.peach.container,
+    success: brandColors.success,
+    successContainer: brandColors.successContainer,
   },
 };
 
@@ -53,6 +126,7 @@ export default function RootLayout() {
               <Stack.Screen name="index" />
               <Stack.Screen name="(auth)" />
               <Stack.Screen name="(app)" />
+              <Stack.Screen name="(athlete)" />
             </Stack>
             <StatusBar style="dark" />
           </AuthProvider>
