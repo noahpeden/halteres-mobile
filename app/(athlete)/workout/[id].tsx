@@ -149,17 +149,32 @@ export default function WorkoutDetailScreen() {
     }
   };
 
-  const handleResultSuccess = (result: any, isPR: boolean, prInfo: any) => {
+  const handleResultSuccess = async (result: any, isPR: boolean, prInfo: any) => {
     setUserResult({
       ...result,
       displayValue: formatResult(result),
     });
-    setActiveTab("leaderboard");
 
     if (isPR && prInfo) {
       setPrData(prInfo);
       setShowPRCelebration(true);
     }
+
+    // Auto-trigger AI feedback generation in the background
+    try {
+      fetch(`${process.env.EXPO_PUBLIC_WEB_URL || 'https://halteres.ai'}/api/ai-feedback`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          workoutResultId: result.id,
+          userId: user?.id,
+        }),
+      }).catch(() => {}); // Fire and forget
+    } catch (e) {
+      // Silently fail - feedback generation is non-critical
+    }
+
+    setActiveTab("leaderboard");
   };
 
   if (loading) {

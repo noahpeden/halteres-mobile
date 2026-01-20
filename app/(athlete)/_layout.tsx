@@ -1,4 +1,4 @@
-import { Tabs } from "expo-router";
+import { Tabs, Redirect } from "expo-router";
 import {
   Calendar,
   Trophy,
@@ -6,10 +6,27 @@ import {
   Sparkles,
   User,
 } from "lucide-react-native";
-import { Platform, StyleSheet, View } from "react-native";
+import { Platform, StyleSheet, View, ActivityIndicator } from "react-native";
 import { brandColors } from "@/app/_layout";
+import { useAuth } from "@/hooks/useAuth";
 
 export default function AthleteLayout() {
+  const { isCoach, isLoading, loadingProfile, user } = useAuth();
+
+  // Show loading while checking auth
+  if (isLoading || loadingProfile) {
+    return (
+      <View style={{ flex: 1, justifyContent: "center", alignItems: "center" }}>
+        <ActivityIndicator size="large" color={brandColors.smartBlue.DEFAULT} />
+      </View>
+    );
+  }
+
+  // Redirect coaches to coach section
+  if (user && isCoach) {
+    return <Redirect href="/(app)/dashboard" />;
+  }
+
   return (
     <Tabs
       screenOptions={{

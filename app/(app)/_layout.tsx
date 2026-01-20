@@ -1,9 +1,26 @@
-import { Tabs } from "expo-router";
+import { Tabs, Redirect } from "expo-router";
 import { BarChart3, Building2, Dumbbell, Home, Settings, Users } from "lucide-react-native";
-import { Platform, StyleSheet, View } from "react-native";
+import { Platform, StyleSheet, View, ActivityIndicator } from "react-native";
 import { brandColors } from "@/app/_layout";
+import { useAuth } from "@/hooks/useAuth";
 
 export default function AppLayout() {
+  const { isAthlete, isLoading, loadingProfile, user } = useAuth();
+
+  // Show loading while checking auth
+  if (isLoading || loadingProfile) {
+    return (
+      <View style={{ flex: 1, justifyContent: "center", alignItems: "center" }}>
+        <ActivityIndicator size="large" color={brandColors.smartBlue.DEFAULT} />
+      </View>
+    );
+  }
+
+  // Redirect athletes to athlete section
+  if (user && isAthlete) {
+    return <Redirect href="/(athlete)/home" />;
+  }
+
   return (
     <Tabs
       screenOptions={{

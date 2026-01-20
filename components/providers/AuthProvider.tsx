@@ -20,8 +20,10 @@ type Profile = {
   last_generation_date: string | null;
   role: UserRole;
   display_name: string | null;
+  full_name: string | null;
   profile_photo_url: string | null;
   notification_preferences: Record<string, boolean> | null;
+  onboarding_completed: boolean;
   // Athlete metrics
   bench_1rm: number | null;
   squat_1rm: number | null;
@@ -136,8 +138,8 @@ export function AuthProvider({ children }: PropsWithChildren) {
         .from("profiles")
         .select(
           `subscription_status, trial_end_date, generations_remaining, last_generation_date,
-           role, display_name, profile_photo_url, notification_preferences,
-           bench_1rm, squat_1rm, deadlift_1rm, weight_kg, height_cm, mile_time,
+           role, display_name, full_name, profile_photo_url, notification_preferences,
+           onboarding_completed, bench_1rm, squat_1rm, deadlift_1rm, weight_kg, height_cm, mile_time,
            gender, recovery_score, injury_history`
         )
         .eq("id", userId)

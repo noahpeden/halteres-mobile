@@ -7,6 +7,8 @@ import { Calendar, Dumbbell, Clock, Trophy, TrendingUp } from "lucide-react-nati
 import { AuthContext } from "@/components/providers/AuthProvider";
 import { supabase } from "@/lib/supabase/client";
 import { brandColors } from "@/app/_layout";
+import WeeklyTrendsCard from "@/components/athlete/WeeklyTrendsCard";
+import AthleteOnboardingModal from "@/components/athlete/AthleteOnboardingModal";
 
 type Workout = {
   id: string;
@@ -34,11 +36,12 @@ type RecentResult = {
 
 export default function AthleteHomeScreen() {
   const router = useRouter();
-  const { user, profile, currentGym, gymMemberships } = useContext(AuthContext);
+  const { user, profile, currentGym, gymMemberships, refetchProfile } = useContext(AuthContext);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [todaysWorkouts, setTodaysWorkouts] = useState<Workout[]>([]);
   const [recentResults, setRecentResults] = useState<RecentResult[]>([]);
+  const [showOnboarding, setShowOnboarding] = useState(false);
   const [stats, setStats] = useState({
     workoutsThisWeek: 0,
     prsThisMonth: 0,
@@ -47,6 +50,20 @@ export default function AthleteHomeScreen() {
 
   const displayName = profile?.display_name || profile?.full_name || "Athlete";
   const hasGym = gymMemberships && gymMemberships.length > 0;
+
+  // Check if onboarding is needed
+  useEffect(() => {
+    if (profile && currentGym && !profile.onboarding_completed) {
+      setShowOnboarding(true);
+    }
+  }, [profile, currentGym]);
+
+  const handleOnboardingComplete = async () => {
+    setShowOnboarding(false);
+    if (refetchProfile) {
+      await refetchProfile();
+    }
+  };
 
   const fetchData = useCallback(async () => {
     if (!currentGym?.id || !user?.id) {
@@ -161,6 +178,14 @@ export default function AthleteHomeScreen() {
 
   return (
     <SafeAreaView style={styles.container} edges={["top"]}>
+      {/* Onboarding Modal */}
+      <AthleteOnboardingModal
+        profile={profile}
+        gymName={currentGym?.name}
+        visible={showOnboarding}
+        onComplete={handleOnboardingComplete}
+      />
+
       <ScrollView
         contentContainerStyle={styles.scrollContent}
         refreshControl={
@@ -236,6 +261,9 @@ export default function AthleteHomeScreen() {
                 </Text>
               </Surface>
             </View>
+
+            {/* Weekly AI Trends */}
+            <WeeklyTrendsCard />
 
             {/* Today's Workouts */}
             <View style={styles.section}>

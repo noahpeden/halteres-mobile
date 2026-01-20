@@ -1,5 +1,5 @@
 import { useState, useEffect, useContext, useCallback } from "react";
-import { View, StyleSheet, ScrollView, RefreshControl } from "react-native";
+import { View, StyleSheet, ScrollView, RefreshControl, Modal } from "react-native";
 import {
   Text,
   Surface,
@@ -10,6 +10,9 @@ import {
   Chip,
   SegmentedButtons,
   ActivityIndicator,
+  TextInput,
+  Portal,
+  IconButton,
 } from "react-native-paper";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useRouter } from "expo-router";
@@ -20,10 +23,13 @@ import {
   Award,
   Dumbbell,
   Trophy,
+  Edit3,
+  X,
 } from "lucide-react-native";
 import { supabase } from "@/lib/supabase/client";
 import { AuthContext } from "@/components/providers/AuthProvider";
 import { brandColors } from "@/app/_layout";
+import { useAthleteProfile } from "@/hooks/useAthleteProfile";
 
 type Tab = "prs" | "metrics";
 
@@ -54,13 +60,26 @@ export default function ProfileScreen() {
     gymMemberships,
     athleteMetrics,
     signOut,
+    refetchProfile,
   } = useContext(AuthContext);
+
+  const { updateProfile, loading: savingProfile } = useAthleteProfile();
 
   const [prs, setPrs] = useState<PersonalRecord[]>([]);
   const [stats, setStats] = useState<Stats | null>(null);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [activeTab, setActiveTab] = useState<Tab>("prs");
+  const [editModalVisible, setEditModalVisible] = useState(false);
+  const [editData, setEditData] = useState({
+    display_name: "",
+    squat_1rm: "",
+    deadlift_1rm: "",
+    bench_1rm: "",
+    mile_time: "",
+    weight_kg: "",
+    height_cm: "",
+  });
 
   const displayName =
     profile?.display_name || profile?.full_name || user?.email || "Athlete";
@@ -133,6 +152,21 @@ export default function ProfileScreen() {
     fetchProfileData();
   }, [fetchProfileData]);
 
+  // Populate edit data when profile changes
+  useEffect(() => {
+    if (profile || athleteMetrics) {
+      setEditData({
+        display_name: profile?.display_name || profile?.full_name || "",
+        squat_1rm: athleteMetrics?.squat_1rm?.toString() || "",
+        deadlift_1rm: athleteMetrics?.deadlift_1rm?.toString() || "",
+        bench_1rm: athleteMetrics?.bench_1rm?.toString() || "",
+        mile_time: athleteMetrics?.mile_time || "",
+        weight_kg: athleteMetrics?.weight_kg?.toString() || "",
+        height_cm: athleteMetrics?.height_cm?.toString() || "",
+      });
+    }
+  }, [profile, athleteMetrics]);
+
   const formatPRValue = (pr: any): string => {
     switch (pr.result_type) {
       case "time":
@@ -160,6 +194,17 @@ export default function ProfileScreen() {
       router.replace("/(auth)/login");
     } catch (error) {
       console.error("Sign out error:", error);
+    }
+  };
+
+  const handleEditProfile = () => {
+    setEditModalVisible(true);
+  };
+
+  const handleSaveProfile = async () => {
+    const result = await updateProfile(editData);
+    if (result.success) {
+      setEditModalVisible(false);
     }
   };
 
@@ -319,10 +364,17 @@ export default function ProfileScreen() {
             {/* Strength Metrics */}
             <Surface style={styles.metricsCard} elevation={1}>
               <View style={styles.metricsSectionHeader}>
-                <Dumbbell size={18} color={brandColors.smartBlue.DEFAULT} />
-                <Text variant="titleMedium" style={styles.metricsTitle}>
-                  Strength Metrics
-                </Text>
+                <View style={styles.metricsTitleRow}>
+                  <Dumbbell size={18} color={brandColors.smartBlue.DEFAULT} />
+                  <Text variant="titleMedium" style={styles.metricsTitle}>
+                    Strength Metrics
+                  </Text>
+                </View>
+                <IconButton
+                  icon={() => <Edit3 size={18} color={brandColors.smartBlue.DEFAULT} />}
+                  onPress={handleEditProfile}
+                  size={20}
+                />
               </View>
               <View style={styles.metricsGrid}>
                 <MetricItem label="Back Squat 1RM" value={athleteMetrics?.squat_1rm} unit="kg" />
@@ -334,18 +386,25 @@ export default function ProfileScreen() {
 
             {/* Body Metrics */}
             <Surface style={styles.metricsCard} elevation={1}>
-              <Text variant="titleMedium" style={styles.metricsTitle}>
-                Body Metrics
-              </Text>
+              <View style={styles.metricsTitleRow}>
+                <Text variant="titleMedium" style={styles.metricsTitle}>
+                  Body Metrics
+                </Text>
+              </View>
               <View style={styles.metricsGrid}>
                 <MetricItem label="Weight" value={athleteMetrics?.weight_kg} unit="kg" />
                 <MetricItem label="Height" value={athleteMetrics?.height_cm} unit="cm" />
               </View>
             </Surface>
 
-            <Text variant="bodySmall" style={styles.metricsNote}>
-              Contact your coach to update your metrics
-            </Text>
+            <Button
+              mode="outlined"
+              icon={() => <Edit3 size={16} color={brandColors.smartBlue.DEFAULT} />}
+              onPress={handleEditProfile}
+              style={styles.editButton}
+            >
+              Edit My Metrics
+            </Button>
           </View>
         )}
 
@@ -357,7 +416,7 @@ export default function ProfileScreen() {
             title="Edit Profile"
             left={(props) => <List.Icon {...props} icon="account-edit" />}
             right={() => <ChevronRight size={20} color="#666" />}
-            onPress={() => {}}
+            onPress={handleEditProfile}
             style={styles.listItem}
           />
           {gymMemberships.length > 1 && (
@@ -382,6 +441,122 @@ export default function ProfileScreen() {
           Sign Out
         </Button>
       </ScrollView>
+
+      {/* Edit Profile Modal */}
+      <Portal>
+        <Modal
+          visible={editModalVisible}
+          onDismiss={() => setEditModalVisible(false)}
+          animationType="slide"
+          presentationStyle="pageSheet"
+        >
+          <SafeAreaView style={styles.modalContainer}>
+            <View style={styles.modalHeader}>
+              <Text variant="titleLarge" style={styles.modalTitle}>
+                Edit Profile
+              </Text>
+              <IconButton
+                icon={() => <X size={24} color="#666" />}
+                onPress={() => setEditModalVisible(false)}
+              />
+            </View>
+
+            <ScrollView style={styles.modalContent} showsVerticalScrollIndicator={false}>
+              <TextInput
+                label="Display Name"
+                value={editData.display_name}
+                onChangeText={(text) => setEditData({ ...editData, display_name: text })}
+                mode="outlined"
+                style={styles.modalInput}
+              />
+
+              <Text variant="titleSmall" style={styles.modalSectionTitle}>
+                Strength Metrics
+              </Text>
+
+              <View style={styles.modalInputRow}>
+                <TextInput
+                  label="Squat 1RM (kg)"
+                  value={editData.squat_1rm}
+                  onChangeText={(text) => setEditData({ ...editData, squat_1rm: text })}
+                  mode="outlined"
+                  keyboardType="numeric"
+                  style={styles.modalInputHalf}
+                />
+                <TextInput
+                  label="Deadlift 1RM (kg)"
+                  value={editData.deadlift_1rm}
+                  onChangeText={(text) => setEditData({ ...editData, deadlift_1rm: text })}
+                  mode="outlined"
+                  keyboardType="numeric"
+                  style={styles.modalInputHalf}
+                />
+              </View>
+
+              <View style={styles.modalInputRow}>
+                <TextInput
+                  label="Bench 1RM (kg)"
+                  value={editData.bench_1rm}
+                  onChangeText={(text) => setEditData({ ...editData, bench_1rm: text })}
+                  mode="outlined"
+                  keyboardType="numeric"
+                  style={styles.modalInputHalf}
+                />
+                <TextInput
+                  label="Mile Time"
+                  value={editData.mile_time}
+                  onChangeText={(text) => setEditData({ ...editData, mile_time: text })}
+                  mode="outlined"
+                  placeholder="e.g. 7:30"
+                  style={styles.modalInputHalf}
+                />
+              </View>
+
+              <Text variant="titleSmall" style={styles.modalSectionTitle}>
+                Body Metrics
+              </Text>
+
+              <View style={styles.modalInputRow}>
+                <TextInput
+                  label="Weight (kg)"
+                  value={editData.weight_kg}
+                  onChangeText={(text) => setEditData({ ...editData, weight_kg: text })}
+                  mode="outlined"
+                  keyboardType="numeric"
+                  style={styles.modalInputHalf}
+                />
+                <TextInput
+                  label="Height (cm)"
+                  value={editData.height_cm}
+                  onChangeText={(text) => setEditData({ ...editData, height_cm: text })}
+                  mode="outlined"
+                  keyboardType="numeric"
+                  style={styles.modalInputHalf}
+                />
+              </View>
+            </ScrollView>
+
+            <View style={styles.modalFooter}>
+              <Button
+                mode="outlined"
+                onPress={() => setEditModalVisible(false)}
+                style={styles.modalCancelButton}
+              >
+                Cancel
+              </Button>
+              <Button
+                mode="contained"
+                onPress={handleSaveProfile}
+                loading={savingProfile}
+                disabled={savingProfile}
+                style={styles.modalSaveButton}
+              >
+                Save Changes
+              </Button>
+            </View>
+          </SafeAreaView>
+        </Modal>
+      </Portal>
     </SafeAreaView>
   );
 }
@@ -545,12 +720,16 @@ const styles = StyleSheet.create({
   metricsSectionHeader: {
     flexDirection: "row",
     alignItems: "center",
-    gap: 8,
+    justifyContent: "space-between",
     marginBottom: 12,
+  },
+  metricsTitleRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
   },
   metricsTitle: {
     fontWeight: "600",
-    marginBottom: 12,
   },
   metricsGrid: {
     flexDirection: "row",
@@ -567,9 +746,8 @@ const styles = StyleSheet.create({
     fontWeight: "bold",
     marginTop: 2,
   },
-  metricsNote: {
-    textAlign: "center",
-    opacity: 0.6,
+  editButton: {
+    marginTop: 4,
   },
   divider: {
     marginVertical: 16,
@@ -585,5 +763,56 @@ const styles = StyleSheet.create({
   signOutButton: {
     marginTop: 16,
     borderColor: "#d32f2f",
+  },
+  // Modal styles
+  modalContainer: {
+    flex: 1,
+    backgroundColor: "#fff",
+  },
+  modalHeader: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    paddingHorizontal: 16,
+    paddingVertical: 8,
+    borderBottomWidth: 1,
+    borderBottomColor: "#f0f0f0",
+  },
+  modalTitle: {
+    fontWeight: "bold",
+  },
+  modalContent: {
+    flex: 1,
+    padding: 16,
+  },
+  modalInput: {
+    marginBottom: 16,
+  },
+  modalSectionTitle: {
+    fontWeight: "600",
+    marginTop: 8,
+    marginBottom: 12,
+    opacity: 0.8,
+  },
+  modalInputRow: {
+    flexDirection: "row",
+    gap: 12,
+    marginBottom: 12,
+  },
+  modalInputHalf: {
+    flex: 1,
+  },
+  modalFooter: {
+    flexDirection: "row",
+    gap: 12,
+    padding: 16,
+    borderTopWidth: 1,
+    borderTopColor: "#f0f0f0",
+  },
+  modalCancelButton: {
+    flex: 1,
+  },
+  modalSaveButton: {
+    flex: 2,
   },
 });
