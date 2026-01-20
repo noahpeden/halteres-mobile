@@ -25,10 +25,10 @@ export default function SignupScreen() {
             <Card.Content style={styles.cardContent}>
               <View style={styles.header}>
                 <Text variant="headlineMedium" style={styles.title}>
-                  Create account
+                  Join HalteresAI
                 </Text>
                 <Text variant="bodyMedium" style={styles.subtitle}>
-                  Start your fitness journey today
+                  Access workouts, compete on leaderboards, and get AI coaching
                 </Text>
               </View>
 

@@ -35,7 +35,7 @@ export default function LoginScreen() {
                   variant="headlineMedium"
                   style={[styles.title, { color: theme.colors.onSurface }]}
                 >
-                  {activeTab === "login" ? "Welcome back" : "Get started"}
+                  {activeTab === "login" ? "Welcome back" : "Join HalteresAI"}
                 </Text>
                 <Text
                   variant="bodyMedium"
@@ -45,8 +45,8 @@ export default function LoginScreen() {
                   ]}
                 >
                   {activeTab === "login"
-                    ? "Sign in to continue your fitness journey"
-                    : "Create your account to begin"}
+                    ? "Access workouts, leaderboards, and AI feedback"
+                    : "Track workouts, compete, and get personalized insights"}
                 </Text>
               </View>
 
