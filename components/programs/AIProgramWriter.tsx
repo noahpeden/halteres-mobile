@@ -13,7 +13,6 @@ import {
 import { useProgramDataMobile } from "@/hooks/useProgramDataMobile";
 import { useTwoPhaseGeneration } from "@/hooks/useTwoPhaseGeneration";
 import { useProgramWorkoutsMobile } from "@/hooks/useProgramWorkoutsMobile";
-import { useEnhanceProgram, type EnhancedWorkout } from "@/hooks/useEnhanceProgram";
 import {
   equipmentList,
   gymEquipmentPresets,
@@ -21,7 +20,6 @@ import {
 import { supabase } from "@/lib/supabase/client";
 import type { TwoPhaseWorkout } from "@/lib/types/twoPhaseGeneration";
 
-import { EnhanceProgramModal } from "./EnhanceProgramModal";
 import { GenerationConfirmModal } from "./GenerationConfirmModal";
 import { TwoPhaseProgress } from "./TwoPhaseProgress";
 import { SkeletonPreview } from "./SkeletonPreview";
@@ -111,15 +109,11 @@ export function AIProgramWriter({ programId }: AIProgramWriterProps) {
   // State for showing skeleton preview vs workout list
   const [showSkeletonPreview, setShowSkeletonPreview] = useState(false);
 
-  // Enhancement hook
-  const { saveEnhancedWorkouts } = useEnhanceProgram();
-
   // Form state
   const [formState, setFormState] = useState<FormState>(defaultFormState);
   const [isDirty, setIsDirty] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
   const [showConfirmModal, setShowConfirmModal] = useState(false);
-  const [showEnhanceModal, setShowEnhanceModal] = useState(false);
   const [snackbarMessage, setSnackbarMessage] = useState("");
 
   // Initialize form state from program data
@@ -348,24 +342,6 @@ export function AIProgramWriter({ programId }: AIProgramWriterProps) {
     setShowConfirmModal(true);
   }, []);
 
-  // Handle enhance
-  const handleEnhanceClick = useCallback(() => {
-    setShowEnhanceModal(true);
-  }, []);
-
-  const handleSaveEnhancedWorkouts = useCallback(
-    async (enhancedWorkouts: EnhancedWorkout[]) => {
-      const success = await saveEnhancedWorkouts(enhancedWorkouts);
-      if (success) {
-        setSnackbarMessage("Workouts enhanced successfully");
-        refetchWorkouts();
-      } else {
-        setSnackbarMessage("Failed to save enhanced workouts");
-      }
-    },
-    [saveEnhancedWorkouts, refetchWorkouts],
-  );
-
   const handleConfirmGeneration = useCallback(async () => {
     setShowConfirmModal(false);
 
@@ -426,17 +402,21 @@ export function AIProgramWriter({ programId }: AIProgramWriterProps) {
   );
 
   // Handle enhance all remaining weeks
-  const handleEnhanceAll = useCallback(async () => {
+  // Options: { includeEnhanced: boolean } - if true, re-enhances already-enhanced weeks
+  const handleEnhanceAll = useCallback(async (options?: { includeEnhanced?: boolean }) => {
     const equipmentNames = formState.equipment
       .map((id) => equipmentList.find((e) => e.value === id)?.label)
       .filter((label): label is string => !!label);
 
-    const result = await enhanceAllRemaining({
-      goal: formState.goal,
-      difficulty: formState.difficulty,
-      equipment: equipmentNames,
-      trainingMethodology: formState.trainingMethodology,
-    });
+    const result = await enhanceAllRemaining(
+      {
+        goal: formState.goal,
+        difficulty: formState.difficulty,
+        equipment: equipmentNames,
+        trainingMethodology: formState.trainingMethodology,
+      },
+      options,
+    );
 
     if (result.success) {
       setSnackbarMessage(`Enhanced all remaining weeks (${result.workoutsCreated} workouts)`);
@@ -634,18 +614,6 @@ export function AIProgramWriter({ programId }: AIProgramWriterProps) {
 
       {/* FAB Group */}
       <View style={styles.fabGroup}>
-        {/* Enhance FAB - only show when workouts exist */}
-        {workouts.length > 0 && (
-          <FAB
-            icon="auto-fix"
-            label="Enhance"
-            onPress={handleEnhanceClick}
-            disabled={isGenerating}
-            style={[styles.fab, styles.enhanceFab]}
-            color={theme.colors.primary}
-          />
-        )}
-
         {/* Generate FAB */}
         <FAB
           icon={workouts.length > 0 ? "refresh" : "play"}
@@ -670,23 +638,6 @@ export function AIProgramWriter({ programId }: AIProgramWriterProps) {
         existingWorkoutCount={workouts.length}
         onConfirm={handleConfirmGeneration}
         onCancel={() => setShowConfirmModal(false)}
-      />
-
-      {/* Enhance Program Modal */}
-      <EnhanceProgramModal
-        visible={showEnhanceModal}
-        workouts={workouts}
-        formData={{
-          name: formState.name,
-          trainingMethodology: formState.trainingMethodology,
-          equipment: formState.equipment
-            .map((id) => equipmentList.find((e) => e.value === id)?.label)
-            .filter((label): label is string => !!label),
-          focusArea: formState.focusArea,
-          workoutFormats: formState.workoutFormats,
-        }}
-        onClose={() => setShowEnhanceModal(false)}
-        onSave={handleSaveEnhancedWorkouts}
       />
 
       {/* Snackbar */}
@@ -770,7 +721,4 @@ const styles = StyleSheet.create({
     alignItems: "flex-end",
   },
   fab: {},
-  enhanceFab: {
-    marginBottom: 8,
-  },
 });

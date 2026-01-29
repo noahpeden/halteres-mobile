@@ -459,11 +459,14 @@ export function useTwoPhaseGeneration(programId: string) {
 
   /**
    * Enhance all remaining skeleton weeks
+   * Options: { includeEnhanced: boolean } - if true, re-enhances already-enhanced weeks
    */
   const enhanceAllRemaining = useCallback(
     async (
       context: EnhanceWeekRequest["context"],
+      options: { includeEnhanced?: boolean } = {},
     ): Promise<TwoPhaseGenerationResult> => {
+      const { includeEnhanced = false } = options;
       setStage("enhancing_all");
 
       // Group workouts by week
@@ -472,17 +475,19 @@ export function useTwoPhaseGeneration(programId: string) {
       );
       const weeks = groupWorkoutsByWeek(skeletonWorkouts);
 
-      // Filter to skeleton-only weeks
-      const skeletonWeeks = weeks.filter((w) => w.status === "skeleton");
+      // Filter based on options - either all weeks or just skeleton weeks
+      const weeksToEnhance = includeEnhanced
+        ? weeks
+        : weeks.filter((w) => w.status === "skeleton");
 
-      if (skeletonWeeks.length === 0) {
+      if (weeksToEnhance.length === 0) {
         setStage("complete");
         return { success: true, workoutsCreated: 0 };
       }
 
       let totalEnhanced = 0;
 
-      for (const week of skeletonWeeks) {
+      for (const week of weeksToEnhance) {
         const workoutIds = week.workouts.map((w) => w.id);
         const result = await enhanceWeek(week.weekNumber, workoutIds, context);
 
