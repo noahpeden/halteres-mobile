@@ -1,8 +1,10 @@
 import { useRouter } from "expo-router";
+import { AlertTriangle } from "lucide-react-native";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { Alert, ScrollView, StyleSheet, View } from "react-native";
 import {
   ActivityIndicator,
+  Banner,
   Button,
   Divider,
   FAB,
@@ -10,22 +12,23 @@ import {
   Text,
   useTheme,
 } from "react-native-paper";
+import { useAuth } from "@/hooks/useAuth";
 import { useProgramDataMobile } from "@/hooks/useProgramDataMobile";
-import { useTwoPhaseGeneration } from "@/hooks/useTwoPhaseGeneration";
 import { useProgramWorkoutsMobile } from "@/hooks/useProgramWorkoutsMobile";
+import { useTwoPhaseGeneration } from "@/hooks/useTwoPhaseGeneration";
+import type { SearchWorkout } from "@/hooks/useWorkoutSearch";
 import {
   equipmentList,
   gymEquipmentPresets,
 } from "@/lib/constants/programConfig";
 import { supabase } from "@/lib/supabase/client";
-import type { TwoPhaseWorkout } from "@/lib/types/twoPhaseGeneration";
-
 import { GenerationConfirmModal } from "./GenerationConfirmModal";
-import { TwoPhaseProgress } from "./TwoPhaseProgress";
-import { SkeletonPreview } from "./SkeletonPreview";
 import { ProgramDetailsSection } from "./ProgramDetailsSection";
 import { ProgramEssentials } from "./ProgramEssentials";
 import { ProgramScheduling } from "./ProgramScheduling";
+import { ReferenceWorkoutSearchModal } from "./ReferenceWorkoutSearchModal";
+import { SkeletonPreview } from "./SkeletonPreview";
+import { TwoPhaseProgress } from "./TwoPhaseProgress";
 import { WorkoutList } from "./WorkoutList";
 
 type AIProgramWriterProps = {
@@ -75,6 +78,7 @@ const defaultFormState: FormState = {
 export function AIProgramWriter({ programId }: AIProgramWriterProps) {
   const theme = useTheme();
   const router = useRouter();
+  const { profile } = useAuth();
 
   // Data hooks
   const {
@@ -86,6 +90,9 @@ export function AIProgramWriter({ programId }: AIProgramWriterProps) {
     workouts,
     loading: workoutsLoading,
     refetch: refetchWorkouts,
+    updateWorkoutDate,
+    toggleWorkoutComplete,
+    deleteWorkout,
   } = useProgramWorkoutsMobile(programId);
   // Two-phase generation hook
   const {
@@ -106,6 +113,63 @@ export function AIProgramWriter({ programId }: AIProgramWriterProps) {
     cancel: cancelGeneration,
   } = useTwoPhaseGeneration(programId);
 
+  // Subscription eligibility check
+  const { isEligibleToGenerate, disabledReason } = useMemo(() => {
+    const subscriptionStatus = profile?.subscription_status;
+    const trialEndDate = profile?.trial_end_date;
+    const generationsRemaining = profile?.generations_remaining;
+
+    const isActive = subscriptionStatus === "active";
+    const isTrialing = subscriptionStatus === "trialing";
+    const now = new Date();
+
+    // Active subscribers can always generate
+    if (isActive) {
+      return { isEligibleToGenerate: true, disabledReason: null };
+    }
+
+    // Trial user checks
+    if (isTrialing) {
+      // Check 1: Trial Validity
+      const trialEnd = trialEndDate ? new Date(trialEndDate) : null;
+      const isTrialValid =
+        trialEnd instanceof Date &&
+        !Number.isNaN(trialEnd.getTime()) &&
+        new Date(trialEnd.toDateString()) >= new Date(now.toDateString());
+
+      if (!isTrialValid) {
+        return {
+          isEligibleToGenerate: false,
+          disabledReason:
+            "Your trial period has expired. Please upgrade to continue generating programs.",
+        };
+      }
+
+      // Check 2: Trial Generations Remaining
+      const remaining = generationsRemaining ?? 0;
+      if (remaining <= 0) {
+        return {
+          isEligibleToGenerate: false,
+          disabledReason:
+            "You have used all your trial generations. Please upgrade to continue generating programs.",
+        };
+      }
+
+      // All trial checks pass
+      return { isEligibleToGenerate: true, disabledReason: null };
+    }
+
+    // Default: Not active and not on trial
+    return {
+      isEligibleToGenerate: false,
+      disabledReason: "Please start a trial or subscribe to generate programs.",
+    };
+  }, [
+    profile?.subscription_status,
+    profile?.trial_end_date,
+    profile?.generations_remaining,
+  ]);
+
   // State for showing skeleton preview vs workout list
   const [showSkeletonPreview, setShowSkeletonPreview] = useState(false);
 
@@ -114,6 +178,8 @@ export function AIProgramWriter({ programId }: AIProgramWriterProps) {
   const [isDirty, setIsDirty] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
   const [showConfirmModal, setShowConfirmModal] = useState(false);
+  const [showReferenceSearchModal, setShowReferenceSearchModal] =
+    useState(false);
   const [snackbarMessage, setSnackbarMessage] = useState("");
 
   // Initialize form state from program data
@@ -392,7 +458,9 @@ export function AIProgramWriter({ programId }: AIProgramWriterProps) {
       });
 
       if (result.success) {
-        setSnackbarMessage(`Enhanced Week ${weekNumber} (${result.workoutsCreated} workouts)`);
+        setSnackbarMessage(
+          `Enhanced Week ${weekNumber} (${result.workoutsCreated} workouts)`,
+        );
         refetchWorkouts();
       } else {
         setSnackbarMessage(`Enhancement failed: ${result.error}`);
@@ -403,81 +471,112 @@ export function AIProgramWriter({ programId }: AIProgramWriterProps) {
 
   // Handle enhance all remaining weeks
   // Options: { includeEnhanced: boolean } - if true, re-enhances already-enhanced weeks
-  const handleEnhanceAll = useCallback(async (options?: { includeEnhanced?: boolean }) => {
-    const equipmentNames = formState.equipment
-      .map((id) => equipmentList.find((e) => e.value === id)?.label)
-      .filter((label): label is string => !!label);
+  const handleEnhanceAll = useCallback(
+    async (options?: { includeEnhanced?: boolean }) => {
+      const equipmentNames = formState.equipment
+        .map((id) => equipmentList.find((e) => e.value === id)?.label)
+        .filter((label): label is string => !!label);
 
-    const result = await enhanceAllRemaining(
-      {
-        goal: formState.goal,
-        difficulty: formState.difficulty,
-        equipment: equipmentNames,
-        trainingMethodology: formState.trainingMethodology,
-      },
-      options,
-    );
+      const result = await enhanceAllRemaining(
+        {
+          goal: formState.goal,
+          difficulty: formState.difficulty,
+          equipment: equipmentNames,
+          trainingMethodology: formState.trainingMethodology,
+        },
+        options,
+      );
 
-    if (result.success) {
-      setSnackbarMessage(`Enhanced all remaining weeks (${result.workoutsCreated} workouts)`);
-      setShowSkeletonPreview(false);
-      refetchWorkouts();
-    } else {
-      setSnackbarMessage(`Enhancement failed: ${result.error}`);
-    }
-  }, [formState, enhanceAllRemaining, refetchWorkouts]);
+      if (result.success) {
+        setSnackbarMessage(
+          `Enhanced all remaining weeks (${result.workoutsCreated} workouts)`,
+        );
+        setShowSkeletonPreview(false);
+        refetchWorkouts();
+      } else {
+        setSnackbarMessage(`Enhancement failed: ${result.error}`);
+      }
+    },
+    [formState, enhanceAllRemaining, refetchWorkouts],
+  );
 
   // Handle skeleton preview complete (view program)
-  const handleSkeletonComplete = useCallback(() => {
+  const _handleSkeletonComplete = useCallback(() => {
     setShowSkeletonPreview(false);
   }, []);
 
   // Handle workout actions
-  const handleDeleteWorkout = useCallback(async (workoutId: string) => {
-    Alert.alert(
-      "Delete Workout",
-      "Are you sure you want to delete this workout?",
-      [
-        { text: "Cancel", style: "cancel" },
-        {
-          text: "Delete",
-          style: "destructive",
-          onPress: async () => {
-            try {
-              const { error } = await supabase
-                .from("program_workouts")
-                .delete()
-                .eq("id", workoutId);
-              if (error) throw error;
-              setSnackbarMessage("Workout deleted");
-            } catch (err) {
-              const message =
-                err instanceof Error ? err.message : "Unknown error";
-              setSnackbarMessage(`Error: ${message}`);
-            }
+  const handleDeleteWorkout = useCallback(
+    async (workoutId: string) => {
+      Alert.alert(
+        "Delete Workout",
+        "Are you sure you want to delete this workout?",
+        [
+          { text: "Cancel", style: "cancel" },
+          {
+            text: "Delete",
+            style: "destructive",
+            onPress: async () => {
+              const result = await deleteWorkout(workoutId);
+              if (result.success) {
+                setSnackbarMessage("Workout deleted");
+              } else {
+                setSnackbarMessage(`Error: ${result.error}`);
+              }
+            },
           },
-        },
-      ],
-    );
-  }, []);
+        ],
+      );
+    },
+    [deleteWorkout],
+  );
 
   const handleToggleComplete = useCallback(
     async (workoutId: string, completed: boolean) => {
-      try {
-        const { error } = await supabase
-          .from("program_workouts")
-          .update({
-            completed,
-            completed_at: completed ? new Date().toISOString() : null,
-          })
-          .eq("id", workoutId);
-        if (error) throw error;
-      } catch (err) {
-        const message = err instanceof Error ? err.message : "Unknown error";
-        setSnackbarMessage(`Error: ${message}`);
+      const result = await toggleWorkoutComplete(workoutId, completed);
+      if (!result.success) {
+        setSnackbarMessage(`Error: ${result.error}`);
       }
     },
-    [],
+    [toggleWorkoutComplete],
+  );
+
+  const handleChangeDateWorkout = useCallback(
+    async (workoutId: string, newDate: string) => {
+      const result = await updateWorkoutDate(workoutId, newDate);
+      if (result.success) {
+        setSnackbarMessage("Workout date updated");
+      }
+      return result;
+    },
+    [updateWorkoutDate],
+  );
+
+  // Handle reference workout selection from search modal
+  const handleSelectReferenceWorkouts = useCallback(
+    (selectedWorkouts: SearchWorkout[]) => {
+      if (selectedWorkouts.length === 0) return;
+
+      // Format selected workouts as reference text
+      const referenceText = selectedWorkouts
+        .map(
+          (workout) =>
+            `## ${workout.title}\n${workout.body || "No details available"}`,
+        )
+        .join("\n\n---\n\n");
+
+      // Append to existing reference input or replace
+      const existingInput = formState.referenceInput;
+      const newInput = existingInput
+        ? `${existingInput}\n\n---\n\n${referenceText}`
+        : referenceText;
+
+      updateField("referenceInput", newInput);
+      setSnackbarMessage(
+        `Added ${selectedWorkouts.length} reference workout(s)`,
+      );
+    },
+    [formState.referenceInput, updateField],
   );
 
   if (programLoading) {
@@ -540,7 +639,9 @@ export function AIProgramWriter({ programId }: AIProgramWriterProps) {
             onWeekNoteChange={setWeekNote}
             onEnhanceWeek={handleEnhanceWeek}
             onEnhanceAll={handleEnhanceAll}
-            isEnhancing={stage === "enhancing_week" || stage === "enhancing_all"}
+            isEnhancing={
+              stage === "enhancing_week" || stage === "enhancing_all"
+            }
             enhancingWeek={enhancingWeek}
           />
         )}
@@ -558,6 +659,7 @@ export function AIProgramWriter({ programId }: AIProgramWriterProps) {
           onDescriptionChange={(v) => updateField("description", v)}
           onReferenceInputChange={(v) => updateField("referenceInput", v)}
           onFieldBlur={handleFieldBlur}
+          onSearchWorkouts={() => setShowReferenceSearchModal(true)}
         />
 
         <ProgramScheduling
@@ -608,9 +710,27 @@ export function AIProgramWriter({ programId }: AIProgramWriterProps) {
             programId={programId}
             onDeleteWorkout={handleDeleteWorkout}
             onToggleComplete={handleToggleComplete}
+            onChangeDateWorkout={handleChangeDateWorkout}
           />
         </View>
       </ScrollView>
+
+      {/* Subscription Warning Banner */}
+      {!isEligibleToGenerate && disabledReason && (
+        <Banner
+          visible
+          icon={() => <AlertTriangle size={24} color={theme.colors.error} />}
+          actions={[
+            {
+              label: "Upgrade",
+              onPress: () => router.push("/settings"),
+            },
+          ]}
+          style={styles.subscriptionBanner}
+        >
+          {disabledReason}
+        </Banner>
+      )}
 
       {/* FAB Group */}
       <View style={styles.fabGroup}>
@@ -619,14 +739,23 @@ export function AIProgramWriter({ programId }: AIProgramWriterProps) {
           icon={workouts.length > 0 ? "refresh" : "play"}
           label={workouts.length > 0 ? "Regenerate" : "Generate"}
           onPress={handleGenerateClick}
-          disabled={isGenerating}
+          disabled={isGenerating || !isEligibleToGenerate}
           style={[
             styles.fab,
             workouts.length > 0 && {
               backgroundColor: theme.colors.errorContainer,
             },
+            !isEligibleToGenerate && {
+              backgroundColor: theme.colors.surfaceDisabled,
+            },
           ]}
-          color={workouts.length > 0 ? theme.colors.error : undefined}
+          color={
+            !isEligibleToGenerate
+              ? theme.colors.onSurfaceDisabled
+              : workouts.length > 0
+                ? theme.colors.error
+                : undefined
+          }
         />
       </View>
 
@@ -638,6 +767,13 @@ export function AIProgramWriter({ programId }: AIProgramWriterProps) {
         existingWorkoutCount={workouts.length}
         onConfirm={handleConfirmGeneration}
         onCancel={() => setShowConfirmModal(false)}
+      />
+
+      {/* Reference Workout Search Modal */}
+      <ReferenceWorkoutSearchModal
+        visible={showReferenceSearchModal}
+        onDismiss={() => setShowReferenceSearchModal(false)}
+        onSelect={handleSelectReferenceWorkouts}
       />
 
       {/* Snackbar */}
@@ -721,4 +857,8 @@ const styles = StyleSheet.create({
     alignItems: "flex-end",
   },
   fab: {},
+  subscriptionBanner: {
+    marginHorizontal: 16,
+    marginBottom: 80, // Space for FAB
+  },
 });

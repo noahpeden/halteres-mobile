@@ -1,8 +1,8 @@
 import { useMemo, useState } from "react";
-import { ScrollView, StyleSheet, View } from "react-native";
+import { Alert, ScrollView, StyleSheet, View } from "react-native";
 import { ActivityIndicator, SegmentedButtons, Text } from "react-native-paper";
 import type { Workout } from "@/hooks/useProgramWorkoutsMobile";
-
+import { DatePickerModal } from "./DatePickerModal";
 import { WorkoutCard } from "./WorkoutCard";
 
 type WorkoutListProps = {
@@ -13,6 +13,10 @@ type WorkoutListProps = {
   programId: string;
   onDeleteWorkout: (workoutId: string) => void;
   onToggleComplete: (workoutId: string, completed: boolean) => void;
+  onChangeDateWorkout?: (
+    workoutId: string,
+    newDate: string,
+  ) => Promise<{ success: boolean; error?: string }>;
 };
 
 export function WorkoutList({
@@ -23,8 +27,39 @@ export function WorkoutList({
   programId,
   onDeleteWorkout,
   onToggleComplete,
+  onChangeDateWorkout,
 }: WorkoutListProps) {
   const [selectedWeek, setSelectedWeek] = useState("1");
+
+  // Date picker modal state
+  const [datePickerVisible, setDatePickerVisible] = useState(false);
+  const [selectedWorkoutForDate, setSelectedWorkoutForDate] = useState<{
+    id: string;
+    currentDate?: string;
+  } | null>(null);
+
+  const handleChangeDate = (workoutId: string, currentDate?: string) => {
+    setSelectedWorkoutForDate({ id: workoutId, currentDate });
+    setDatePickerVisible(true);
+  };
+
+  const handleSaveDate = async (newDate: string) => {
+    if (!selectedWorkoutForDate || !onChangeDateWorkout) return;
+
+    const result = await onChangeDateWorkout(
+      selectedWorkoutForDate.id,
+      newDate,
+    );
+    if (!result.success) {
+      Alert.alert("Error", result.error || "Failed to update date");
+      throw new Error(result.error);
+    }
+  };
+
+  const handleDismissDatePicker = () => {
+    setDatePickerVisible(false);
+    setSelectedWorkoutForDate(null);
+  };
 
   // Group workouts by week
   const workoutsByWeek = useMemo(() => {
@@ -155,10 +190,20 @@ export function WorkoutList({
               programId={programId}
               onDelete={onDeleteWorkout}
               onToggleComplete={onToggleComplete}
+              onChangeDate={onChangeDateWorkout ? handleChangeDate : undefined}
             />
           ))
         )}
       </View>
+
+      {/* Date Picker Modal */}
+      <DatePickerModal
+        visible={datePickerVisible}
+        currentDate={selectedWorkoutForDate?.currentDate}
+        onDismiss={handleDismissDatePicker}
+        onSave={handleSaveDate}
+        title="Change Workout Date"
+      />
     </View>
   );
 }

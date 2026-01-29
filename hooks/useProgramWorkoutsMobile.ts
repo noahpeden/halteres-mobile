@@ -148,11 +148,120 @@ export function useProgramWorkoutsMobile(programId: string) {
     };
   }, [programId]);
 
+  // Update workout scheduled date
+  const updateWorkoutDate = async (
+    workoutId: string,
+    newDate: string,
+  ): Promise<{ success: boolean; error?: string }> => {
+    if (!workoutId) return { success: false, error: "No workout ID" };
+
+    try {
+      const { error: updateError } = await supabase
+        .from("program_workouts")
+        .update({
+          scheduled_date: newDate,
+          updated_at: new Date().toISOString(),
+        })
+        .eq("id", workoutId);
+
+      if (updateError) throw updateError;
+      return { success: true };
+    } catch (err: unknown) {
+      const errorMessage =
+        err instanceof Error ? err.message : "Failed to update workout date";
+      console.error("Error updating workout date:", err);
+      return { success: false, error: errorMessage };
+    }
+  };
+
+  // Update workout (generic update for title, body, etc.)
+  const updateWorkout = async (
+    workoutId: string,
+    updates: Partial<
+      Pick<Workout, "title" | "body" | "tags" | "scheduled_date">
+    >,
+  ): Promise<{ success: boolean; error?: string }> => {
+    if (!workoutId) return { success: false, error: "No workout ID" };
+
+    try {
+      const { error: updateError } = await supabase
+        .from("program_workouts")
+        .update({
+          ...updates,
+          updated_at: new Date().toISOString(),
+        })
+        .eq("id", workoutId);
+
+      if (updateError) throw updateError;
+      return { success: true };
+    } catch (err: unknown) {
+      const errorMessage =
+        err instanceof Error ? err.message : "Failed to update workout";
+      console.error("Error updating workout:", err);
+      return { success: false, error: errorMessage };
+    }
+  };
+
+  // Toggle workout completion
+  const toggleWorkoutComplete = async (
+    workoutId: string,
+    completed: boolean,
+  ): Promise<{ success: boolean; error?: string }> => {
+    if (!workoutId) return { success: false, error: "No workout ID" };
+
+    try {
+      const { error: updateError } = await supabase
+        .from("program_workouts")
+        .update({
+          completed,
+          completed_at: completed ? new Date().toISOString() : null,
+          updated_at: new Date().toISOString(),
+        })
+        .eq("id", workoutId);
+
+      if (updateError) throw updateError;
+      return { success: true };
+    } catch (err: unknown) {
+      const errorMessage =
+        err instanceof Error
+          ? err.message
+          : "Failed to toggle workout completion";
+      console.error("Error toggling workout completion:", err);
+      return { success: false, error: errorMessage };
+    }
+  };
+
+  // Delete workout
+  const deleteWorkout = async (
+    workoutId: string,
+  ): Promise<{ success: boolean; error?: string }> => {
+    if (!workoutId) return { success: false, error: "No workout ID" };
+
+    try {
+      const { error: deleteError } = await supabase
+        .from("program_workouts")
+        .delete()
+        .eq("id", workoutId);
+
+      if (deleteError) throw deleteError;
+      return { success: true };
+    } catch (err: unknown) {
+      const errorMessage =
+        err instanceof Error ? err.message : "Failed to delete workout";
+      console.error("Error deleting workout:", err);
+      return { success: false, error: errorMessage };
+    }
+  };
+
   return {
     workouts,
     referenceWorkouts,
     loading,
     error,
     refetch: fetchWorkouts,
+    updateWorkoutDate,
+    updateWorkout,
+    toggleWorkoutComplete,
+    deleteWorkout,
   };
 }

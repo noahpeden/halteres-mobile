@@ -9,7 +9,7 @@ import {
   Trash2,
   X,
 } from "lucide-react-native";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import {
   Alert,
   ScrollView,
@@ -43,9 +43,10 @@ type EnhancedWorkout = {
 };
 
 export default function WorkoutDetailScreen() {
-  const { id: programId, workoutId } = useLocalSearchParams<{
+  const { id: programId, workoutId, edit } = useLocalSearchParams<{
     id: string;
     workoutId: string;
+    edit?: string;
   }>();
   const router = useRouter();
   const theme = useTheme();
@@ -63,10 +64,11 @@ export default function WorkoutDetailScreen() {
 
   const { program } = useProgramDataMobile(programId);
 
-  // Edit mode state
-  const [isEditing, setIsEditing] = useState(false);
+  // Edit mode state - initialize from query param if present
+  const [isEditing, setIsEditing] = useState(edit === "true");
   const [editTitle, setEditTitle] = useState("");
   const [editBody, setEditBody] = useState("");
+  const [hasInitializedEdit, setHasInitializedEdit] = useState(false);
 
   // Enhance mode state
   const [showEnhanceModal, setShowEnhanceModal] = useState(false);
@@ -78,6 +80,16 @@ export default function WorkoutDetailScreen() {
   const [isToggling, setIsToggling] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
+
+  // Initialize edit mode when navigating with ?edit=true query param
+  useEffect(() => {
+    if (edit === "true" && workout && !hasInitializedEdit) {
+      setEditTitle(workout.title || "");
+      setEditBody(workout.body || "");
+      setIsEditing(true);
+      setHasInitializedEdit(true);
+    }
+  }, [edit, workout, hasInitializedEdit]);
 
   const formatDate = (dateString?: string) => {
     if (!dateString) return "";
