@@ -10,13 +10,13 @@ import { Platform } from "react-native";
 export function getApiUrl(): string {
   const envUrl = process.env.EXPO_PUBLIC_API_URL;
 
-  // If pointing to production, use as-is
-  if (envUrl && !envUrl.includes("localhost")) {
-    return envUrl;
-  }
-
-  // For local development
+  // For local development only
   if (__DEV__) {
+    // If env is set to a non-localhost URL, use it (e.g., testing against production)
+    if (envUrl && !envUrl.includes("localhost") && !envUrl.includes("10.0.2.2")) {
+      return envUrl;
+    }
+    // Otherwise use localhost with platform-appropriate address
     if (Platform.OS === "android") {
       // Android emulator uses 10.0.2.2 to reach host's localhost
       return "http://10.0.2.2:3000";
@@ -25,8 +25,13 @@ export function getApiUrl(): string {
     return "http://localhost:3000";
   }
 
+  // Production: always use production URL, ignore any localhost env vars
+  if (envUrl && !envUrl.includes("localhost") && !envUrl.includes("10.0.2.2")) {
+    return envUrl;
+  }
+
   // Production fallback
-  return envUrl || "https://halteres.ai";
+  return "https://halteres.ai";
 }
 
 export const API_BASE = getApiUrl();
