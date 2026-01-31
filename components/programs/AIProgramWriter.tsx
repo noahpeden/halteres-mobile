@@ -455,6 +455,7 @@ export function AIProgramWriter({ programId }: AIProgramWriterProps) {
         difficulty: formState.difficulty,
         equipment: equipmentNames,
         trainingMethodology: formState.trainingMethodology,
+        useImperial: true,
       });
 
       if (result.success) {
