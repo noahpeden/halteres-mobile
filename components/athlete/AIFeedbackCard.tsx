@@ -9,6 +9,7 @@ import {
 } from "react-native-paper";
 import { AuthContext } from "@/components/providers/AuthProvider";
 import { brandColors } from "@/app/_layout";
+import { API_BASE } from "@/lib/api/getApiUrl";
 
 type Feedback = {
   id: string;
@@ -24,8 +25,6 @@ type Props = {
   workoutResultId: string;
   autoGenerate?: boolean;
 };
-
-const API_BASE_URL = process.env.EXPO_PUBLIC_API_URL || "https://halteres.ai";
 
 export default function AIFeedbackCard({ workoutResultId, autoGenerate = false }: Props) {
   const { user } = useContext(AuthContext);
@@ -49,7 +48,7 @@ export default function AIFeedbackCard({ workoutResultId, autoGenerate = false }
 
     try {
       const response = await fetch(
-        `${API_BASE_URL}/api/ai-feedback?workoutResultId=${workoutResultId}&userId=${user.id}`
+        `${API_BASE}/api/ai-feedback?workoutResultId=${workoutResultId}&userId=${user.id}`
       );
       const data = await response.json();
       if (data.feedback) {
@@ -67,7 +66,7 @@ export default function AIFeedbackCard({ workoutResultId, autoGenerate = false }
     setError(null);
 
     try {
-      const response = await fetch(`${API_BASE_URL}/api/ai-feedback`, {
+      const response = await fetch(`${API_BASE}/api/ai-feedback`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({

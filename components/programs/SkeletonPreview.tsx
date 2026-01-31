@@ -1,6 +1,6 @@
 import { Loader2, Sparkles } from "lucide-react-native";
 import { useState } from "react";
-import { ScrollView, StyleSheet, View } from "react-native";
+import { Alert, ScrollView, StyleSheet, View } from "react-native";
 import { Button, Card, ProgressBar, Text, useTheme } from "react-native-paper";
 import {
   groupWorkoutsByWeek,
@@ -9,12 +9,16 @@ import {
 } from "@/lib/types/twoPhaseGeneration";
 import { WeekCard } from "./WeekCard";
 
+type EnhanceAllOptions = {
+  includeEnhanced?: boolean;
+};
+
 type SkeletonPreviewProps = {
   workouts: TwoPhaseWorkout[];
   weekNotes: Record<number, string>;
   onWeekNoteChange: (weekNumber: number, note: string) => void;
   onEnhanceWeek: (weekNumber: number, workoutIds: string[]) => void;
-  onEnhanceAll: () => void;
+  onEnhanceAll: (options?: EnhanceAllOptions) => void;
   isEnhancing: boolean;
   enhancingWeek: number | null;
 };
@@ -55,6 +59,35 @@ export function SkeletonPreview({
   const handleEnhanceWeek = (week: WeekData) => {
     const workoutIds = week.workouts.map((w) => w.id);
     onEnhanceWeek(week.weekNumber, workoutIds);
+  };
+
+  // Handle "Enhance All" button click - shows confirmation if weeks already enhanced
+  const handleEnhanceAllClick = () => {
+    if (detailedWeeks > 0) {
+      // Show confirmation if some weeks are already enhanced
+      Alert.alert(
+        "Enhance Remaining Weeks?",
+        `${detailedWeeks} week${detailedWeeks > 1 ? "s have" : " has"} already been enhanced and will be preserved. ${skeletonWeeks} week${skeletonWeeks > 1 ? "s" : ""} will be enhanced.`,
+        [
+          {
+            text: "Cancel",
+            style: "cancel",
+          },
+          {
+            text: `Re-enhance All (${totalWeeks})`,
+            onPress: () => onEnhanceAll({ includeEnhanced: true }),
+          },
+          {
+            text: `Enhance Rest (${skeletonWeeks})`,
+            style: "default",
+            onPress: () => onEnhanceAll(),
+          },
+        ]
+      );
+    } else {
+      // No enhanced weeks, proceed directly
+      onEnhanceAll();
+    }
   };
 
   if (!workouts || workouts.length === 0) {
@@ -132,7 +165,7 @@ export function SkeletonPreview({
             </View>
             <Button
               mode="outlined"
-              onPress={onEnhanceAll}
+              onPress={handleEnhanceAllClick}
               disabled={isEnhancing}
               icon={({ size, color }) =>
                 isEnhancing ? (

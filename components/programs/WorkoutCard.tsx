@@ -3,6 +3,7 @@ import {
   Calendar,
   CheckCircle,
   ChevronRight,
+  Edit2,
   FileText,
   MoreVertical,
 } from "lucide-react-native";
@@ -22,6 +23,8 @@ type WorkoutCardProps = {
   programId: string;
   onDelete?: (workoutId: string) => void;
   onToggleComplete?: (workoutId: string, completed: boolean) => void;
+  onEdit?: (workoutId: string) => void;
+  onChangeDate?: (workoutId: string, currentDate?: string) => void;
 };
 
 const AnimatedPressable = Animated.createAnimatedComponent(Pressable);
@@ -31,6 +34,8 @@ export function WorkoutCard({
   programId,
   onDelete,
   onToggleComplete,
+  onEdit,
+  onChangeDate,
 }: WorkoutCardProps) {
   const theme = useTheme();
   const router = useRouter();
@@ -79,6 +84,21 @@ export function WorkoutCard({
 
   const handleCardPress = () => {
     router.push(`/programs/${programId}/workout/${workout.id}`);
+  };
+
+  const handleEdit = () => {
+    setMenuVisible(false);
+    if (onEdit) {
+      onEdit(workout.id);
+    } else {
+      // Default: navigate to detail screen with edit mode
+      router.push(`/programs/${programId}/workout/${workout.id}?edit=true`);
+    }
+  };
+
+  const handleChangeDate = () => {
+    setMenuVisible(false);
+    onChangeDate?.(workout.id, workout.scheduled_date);
   };
 
   const handleDelete = () => {
@@ -181,6 +201,16 @@ export function WorkoutCard({
                   onPress={handleView}
                   title="View Details"
                   leadingIcon="eye"
+                />
+                <Menu.Item
+                  onPress={handleEdit}
+                  title="Edit"
+                  leadingIcon="pencil"
+                />
+                <Menu.Item
+                  onPress={handleChangeDate}
+                  title="Change Date"
+                  leadingIcon="calendar"
                 />
                 <Menu.Item
                   onPress={handleToggleComplete}
