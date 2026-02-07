@@ -31,7 +31,7 @@
     },
     "android": {
       "package": "com.halteres.mobile",
-      "versionCode": 1,
+      "versionCode": 10,
       "adaptiveIcon": {
         "foregroundImage": "./assets/adaptive-icon.png",
         "backgroundColor": "#020817"
