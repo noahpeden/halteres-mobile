@@ -1,5 +1,6 @@
 import { useRouter } from "expo-router";
 import {
+	BarChart3,
 	ChevronRight,
 	Dumbbell,
 	Plus,
@@ -125,6 +126,7 @@ export default function DashboardScreen() {
   // Animation for quick action cards
   const createProgramScale = useSharedValue(1);
   const addClientScale = useSharedValue(1);
+  const analyticsScale = useSharedValue(1);
 
   const createProgramStyle = useAnimatedStyle(() => ({
     transform: [{ scale: createProgramScale.value }],
@@ -132,6 +134,10 @@ export default function DashboardScreen() {
 
   const addClientStyle = useAnimatedStyle(() => ({
     transform: [{ scale: addClientScale.value }],
+  }));
+
+  const analyticsStyle = useAnimatedStyle(() => ({
+    transform: [{ scale: analyticsScale.value }],
   }));
 
   return (
@@ -261,6 +267,52 @@ export default function DashboardScreen() {
                   </Text>
                   <Text variant="bodySmall" style={styles.quickActionSubtitle}>
                     New athlete or class
+                  </Text>
+                </View>
+                <ChevronRight
+                  size={20}
+                  color={brandColors.practicalGray.light}
+                />
+              </View>
+            </AnimatedPressable>
+
+            <AnimatedPressable
+              onPress={() => router.push("/(app)/analytics")}
+              onPressIn={() => {
+                analyticsScale.value = withSpring(0.96, {
+                  damping: 15,
+                  stiffness: 300,
+                });
+              }}
+              onPressOut={() => {
+                analyticsScale.value = withSpring(1, {
+                  damping: 15,
+                  stiffness: 150,
+                });
+              }}
+              style={[styles.quickAction, analyticsStyle]}
+            >
+              <View
+                style={[styles.quickActionCard, styles.analyticsActionCard]}
+              >
+                <View
+                  style={[
+                    styles.quickActionIconLarge,
+                    { backgroundColor: brandColors.helpfulOrange.container },
+                  ]}
+                >
+                  <BarChart3
+                    size={32}
+                    color={brandColors.helpfulOrange.DEFAULT}
+                    strokeWidth={2}
+                  />
+                </View>
+                <View style={styles.quickActionTextContainer}>
+                  <Text variant="titleMedium" style={styles.quickActionTitle}>
+                    Analytics
+                  </Text>
+                  <Text variant="bodySmall" style={styles.quickActionSubtitle}>
+                    View performance insights
                   </Text>
                 </View>
                 <ChevronRight
@@ -575,6 +627,10 @@ const styles = StyleSheet.create({
   secondaryActionCard: {
     borderLeftWidth: 4,
     borderLeftColor: brandColors.thrivingGreen.DEFAULT,
+  },
+  analyticsActionCard: {
+    borderLeftWidth: 4,
+    borderLeftColor: brandColors.helpfulOrange.DEFAULT,
   },
   quickActionIconLarge: {
     width: 56,

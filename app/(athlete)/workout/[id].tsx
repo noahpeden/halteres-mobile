@@ -26,6 +26,7 @@ import LeaderboardView from "@/components/athlete/LeaderboardView";
 import PRCelebration from "@/components/athlete/PRCelebration";
 import AIFeedbackCard from "@/components/athlete/AIFeedbackCard";
 import { TemplateFeedbackButton, ResultFeedbackCard } from "@/components/feedback";
+import { parseMarkdownContent } from "@/lib/utils/markdownParser";
 
 type Tab = "workout" | "log" | "leaderboard";
 
@@ -291,9 +292,12 @@ export default function WorkoutDetailScreen() {
             <Text variant="titleMedium" style={styles.cardTitle}>
               Description
             </Text>
-            <Text variant="bodyMedium" style={styles.description}>
-              {workout.description || "No description provided."}
-            </Text>
+            <View style={styles.descriptionContainer}>
+              {workout.description
+                ? parseMarkdownContent(workout.description)
+                : <Text variant="bodyMedium" style={styles.description}>No description provided.</Text>
+              }
+            </View>
             {/* Template Feedback */}
             <View style={styles.templateFeedbackContainer}>
               <TemplateFeedbackButton
@@ -536,6 +540,9 @@ const styles = StyleSheet.create({
   description: {
     lineHeight: 22,
     color: "#333",
+  },
+  descriptionContainer: {
+    marginTop: 4,
   },
   templateFeedbackContainer: {
     marginTop: 12,

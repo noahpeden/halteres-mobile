@@ -35,6 +35,7 @@ import { EnhanceWorkoutModal } from "@/components/workouts/EnhanceWorkoutModal";
 import { TemplateFeedbackButton } from "@/components/feedback";
 import { useProgramDataMobile } from "@/hooks/useProgramDataMobile";
 import { useWorkout } from "@/hooks/useWorkout";
+import { parseMarkdownContent } from "@/lib/utils/markdownParser";
 
 type EnhancedWorkout = {
   title: string;
@@ -401,9 +402,9 @@ export default function WorkoutDetailScreen() {
 
                 <Divider style={styles.divider} />
 
-                <Text variant="bodyLarge" style={styles.body} selectable>
-                  {workout.body}
-                </Text>
+                <View style={styles.bodyContainer}>
+                  {parseMarkdownContent(workout.body || workout.body_skeleton)}
+                </View>
               </>
             )}
           </Card.Content>
@@ -588,8 +589,8 @@ const styles = StyleSheet.create({
   divider: {
     marginVertical: 16,
   },
-  body: {
-    lineHeight: 24,
+  bodyContainer: {
+    paddingVertical: 4,
   },
   input: {
     marginBottom: 12,

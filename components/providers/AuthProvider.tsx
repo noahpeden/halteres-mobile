@@ -272,12 +272,63 @@ export function AuthProvider({ children }: PropsWithChildren) {
     const { data, error } = await supabase.auth.signUp({
       email,
       password,
+      options: {
+        data: { role }, // Store role in user metadata for trigger
+      },
     });
     if (error) throw error;
 
-    // Update role in profile after signup
-    if (data.user && role === "athlete") {
-      await supabase.from("profiles").update({ role }).eq("id", data.user.id);
+    if (data.user) {
+      // Check if profile was created by trigger
+      const { data: existingProfile } = await supabase
+        .from("profiles")
+        .select("id")
+        .eq("id", data.user.id)
+        .single();
+
+      if (!existingProfile) {
+        // Profile wasn't created by trigger - create fallback profile
+        console.log("Profile missing for user, creating fallback profile");
+        const now = new Date();
+        const trialEnd = new Date(now.getTime() + 7 * 24 * 60 * 60 * 1000);
+
+        const profileData =
+          role === "athlete"
+            ? {
+                id: data.user.id,
+                role: "athlete" as const,
+                subscription_status: null,
+                is_active: true,
+                onboarding_completed: false,
+              }
+            : {
+                id: data.user.id,
+                role: "coach" as const,
+                subscription_status: "trialing",
+                trial_start_date: now.toISOString(),
+                trial_end_date: trialEnd.toISOString(),
+                generations_remaining: 15,
+                generations_today: 0,
+                is_active: true,
+                onboarding_completed: false,
+              };
+
+        const { error: insertError } = await supabase
+          .from("profiles")
+          .insert([profileData]);
+
+        if (insertError) {
+          console.error("Error creating fallback profile:", insertError);
+        } else {
+          console.log("Fallback profile created for role:", role);
+        }
+      } else if (role === "athlete") {
+        // Profile exists, just update the role if needed
+        await supabase
+          .from("profiles")
+          .update({ role })
+          .eq("id", data.user.id);
+      }
     }
   };
 

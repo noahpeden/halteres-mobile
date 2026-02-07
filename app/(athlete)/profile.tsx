@@ -20,11 +20,11 @@ import {
   Building2,
   LogOut,
   ChevronRight,
-  Award,
   Dumbbell,
   Trophy,
   Edit3,
   X,
+  Sparkles,
 } from "lucide-react-native";
 import { supabase } from "@/lib/supabase/client";
 import { AuthContext } from "@/components/providers/AuthProvider";
@@ -410,6 +410,22 @@ export default function ProfileScreen() {
 
         <Divider style={styles.divider} />
 
+        {/* AI Insights Quick Link */}
+        <Surface style={styles.insightsCard} elevation={1}>
+          <List.Item
+            title="AI Insights"
+            description="Get personalized feedback on your training"
+            left={() => (
+              <View style={styles.insightsIcon}>
+                <Sparkles size={24} color={brandColors.helpfulOrange.DEFAULT} />
+              </View>
+            )}
+            right={() => <ChevronRight size={20} color="#666" />}
+            onPress={() => router.push("/(athlete)/feedback")}
+            style={styles.insightsListItem}
+          />
+        </Surface>
+
         {/* Settings Section */}
         <View style={styles.settingsSection}>
           <List.Item
@@ -751,6 +767,24 @@ const styles = StyleSheet.create({
   },
   divider: {
     marginVertical: 16,
+  },
+  insightsCard: {
+    borderRadius: 12,
+    backgroundColor: "#fff",
+    marginBottom: 16,
+    overflow: "hidden",
+  },
+  insightsIcon: {
+    width: 44,
+    height: 44,
+    borderRadius: 12,
+    backgroundColor: brandColors.helpfulOrange.container,
+    alignItems: "center",
+    justifyContent: "center",
+    marginLeft: 8,
+  },
+  insightsListItem: {
+    paddingVertical: 8,
   },
   settingsSection: {
     marginBottom: 8,

@@ -21,6 +21,11 @@ type SkeletonPreviewProps = {
   onEnhanceAll: (options?: EnhanceAllOptions) => void;
   isEnhancing: boolean;
   enhancingWeek: number | null;
+  // Action props for detailed workouts
+  programId?: string;
+  onDeleteWorkout?: (workoutId: string) => void;
+  onToggleComplete?: (workoutId: string, completed: boolean) => void;
+  onChangeDateWorkout?: (workoutId: string, currentDate?: string) => void;
 };
 
 export function SkeletonPreview({
@@ -31,6 +36,11 @@ export function SkeletonPreview({
   onEnhanceAll,
   isEnhancing,
   enhancingWeek,
+  // Action props for detailed workouts
+  programId,
+  onDeleteWorkout,
+  onToggleComplete,
+  onChangeDateWorkout,
 }: SkeletonPreviewProps) {
   const theme = useTheme();
   const [expandedWeeks, setExpandedWeeks] = useState<Record<number, boolean>>(
@@ -148,6 +158,11 @@ export function SkeletonPreview({
             onNoteChange={(note) => onWeekNoteChange(week.weekNumber, note)}
             onEnhance={() => handleEnhanceWeek(week)}
             isEnhancing={isEnhancing && enhancingWeek === week.weekNumber}
+            // Action props for detailed workouts
+            programId={programId}
+            onDeleteWorkout={onDeleteWorkout}
+            onToggleComplete={onToggleComplete}
+            onChangeDateWorkout={onChangeDateWorkout}
           />
         ))}
       </View>

@@ -1,9 +1,9 @@
 import { Tabs, Redirect } from "expo-router";
 import {
   Calendar,
+  Dumbbell,
+  Home,
   Trophy,
-  Clock,
-  Sparkles,
   User,
 } from "lucide-react-native";
 import { Platform, StyleSheet, View, ActivityIndicator } from "react-native";
@@ -68,7 +68,25 @@ export default function AthleteLayout() {
                 },
               ]}
             >
-              <Calendar color={color} size={22} strokeWidth={focused ? 2.5 : 2} />
+              <Home color={color} size={22} strokeWidth={focused ? 2.5 : 2} />
+            </View>
+          ),
+        }}
+      />
+      <Tabs.Screen
+        name="programs"
+        options={{
+          title: "Programs",
+          tabBarIcon: ({ color, focused }) => (
+            <View
+              style={[
+                styles.iconContainer,
+                focused && {
+                  backgroundColor: brandColors.smartBlue.container,
+                },
+              ]}
+            >
+              <Dumbbell color={color} size={22} strokeWidth={focused ? 2.5 : 2} />
             </View>
           ),
         }}
@@ -76,7 +94,7 @@ export default function AthleteLayout() {
       <Tabs.Screen
         name="leaderboard"
         options={{
-          title: "Leaderboard",
+          title: "Board",
           tabBarIcon: ({ color, focused }) => (
             <View
               style={[
@@ -104,25 +122,7 @@ export default function AthleteLayout() {
                 },
               ]}
             >
-              <Clock color={color} size={22} strokeWidth={focused ? 2.5 : 2} />
-            </View>
-          ),
-        }}
-      />
-      <Tabs.Screen
-        name="feedback"
-        options={{
-          title: "Insights",
-          tabBarIcon: ({ color, focused }) => (
-            <View
-              style={[
-                styles.iconContainer,
-                focused && {
-                  backgroundColor: brandColors.smartBlue.container,
-                },
-              ]}
-            >
-              <Sparkles color={color} size={22} strokeWidth={focused ? 2.5 : 2} />
+              <Calendar color={color} size={22} strokeWidth={focused ? 2.5 : 2} />
             </View>
           ),
         }}
@@ -143,6 +143,13 @@ export default function AthleteLayout() {
               <User color={color} size={22} strokeWidth={focused ? 2.5 : 2} />
             </View>
           ),
+        }}
+      />
+      {/* Hide feedback/insights from tab bar - accessed via Profile */}
+      <Tabs.Screen
+        name="feedback"
+        options={{
+          href: null,
         }}
       />
       {/* Hide workout detail routes from tab bar */}

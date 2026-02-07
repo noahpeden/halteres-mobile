@@ -1,5 +1,5 @@
 import { Tabs, Redirect } from "expo-router";
-import { BarChart3, Building2, Dumbbell, Home, Settings, Users } from "lucide-react-native";
+import { BarChart3, Building2, Dumbbell, Home, User } from "lucide-react-native";
 import { Platform, StyleSheet, View, ActivityIndicator } from "react-native";
 import { brandColors } from "@/app/_layout";
 import { useAuth } from "@/hooks/useAuth";
@@ -113,9 +113,9 @@ export default function AppLayout() {
         }}
       />
       <Tabs.Screen
-        name="analytics"
+        name="profile"
         options={{
-          title: "Analytics",
+          title: "Profile",
           tabBarIcon: ({ color, focused }) => (
             <View
               style={[
@@ -125,7 +125,7 @@ export default function AppLayout() {
                 },
               ]}
             >
-              <BarChart3
+              <User
                 color={color}
                 size={22}
                 strokeWidth={focused ? 2.5 : 2}
@@ -134,26 +134,11 @@ export default function AppLayout() {
           ),
         }}
       />
+      {/* Hide analytics from tab bar - accessed via Dashboard quick action */}
       <Tabs.Screen
-        name="settings"
+        name="analytics"
         options={{
-          title: "Settings",
-          tabBarIcon: ({ color, focused }) => (
-            <View
-              style={[
-                styles.iconContainer,
-                focused && {
-                  backgroundColor: brandColors.smartBlue.container,
-                },
-              ]}
-            >
-              <Settings
-                color={color}
-                size={22}
-                strokeWidth={focused ? 2.5 : 2}
-              />
-            </View>
-          ),
+          href: null,
         }}
       />
       {/* Hide clients routes from tab bar - accessed via navigation */}

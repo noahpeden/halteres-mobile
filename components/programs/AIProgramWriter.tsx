@@ -644,6 +644,15 @@ export function AIProgramWriter({ programId }: AIProgramWriterProps) {
               stage === "enhancing_week" || stage === "enhancing_all"
             }
             enhancingWeek={enhancingWeek}
+            // Action props for detailed workouts
+            programId={programId}
+            onDeleteWorkout={handleDeleteWorkout}
+            onToggleComplete={handleToggleComplete}
+            onChangeDateWorkout={(workoutId, currentDate) => {
+              // For now, this triggers console log. Date picker would be implemented
+              // as a separate modal. The WorkoutCard already has date change capability.
+              console.log("Change date for workout:", workoutId, currentDate);
+            }}
           />
         )}
 

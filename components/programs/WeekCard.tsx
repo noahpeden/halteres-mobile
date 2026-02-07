@@ -16,6 +16,8 @@ import {
   useTheme,
 } from "react-native-paper";
 import type { WeekData } from "@/lib/types/twoPhaseGeneration";
+import { WorkoutCard } from "./WorkoutCard";
+import type { Workout } from "@/hooks/useProgramWorkoutsMobile";
 
 type WeekCardProps = {
   week: WeekData;
@@ -25,6 +27,11 @@ type WeekCardProps = {
   onNoteChange: (note: string) => void;
   onEnhance: () => void;
   isEnhancing: boolean;
+  // Action props for detailed workouts
+  programId?: string;
+  onDeleteWorkout?: (workoutId: string) => void;
+  onToggleComplete?: (workoutId: string, completed: boolean) => void;
+  onChangeDateWorkout?: (workoutId: string, currentDate?: string) => void;
 };
 
 function extractFocus(title: string | undefined): string {
@@ -41,6 +48,11 @@ export function WeekCard({
   onNoteChange,
   onEnhance,
   isEnhancing,
+  // Action props for detailed workouts
+  programId,
+  onDeleteWorkout,
+  onToggleComplete,
+  onChangeDateWorkout,
 }: WeekCardProps) {
   const theme = useTheme();
 
@@ -52,7 +64,7 @@ export function WeekCard({
           backgroundColor: theme.colors.primaryContainer + "20",
           badgeColor: theme.colors.primaryContainer,
           badgeTextColor: theme.colors.onPrimaryContainer,
-          label: "Complete",
+          label: "Fully Written",
         };
       case "enhancing":
         return {
@@ -175,40 +187,62 @@ export function WeekCard({
         {/* Expanded Content */}
         {isExpanded && (
           <View style={styles.expandedContent}>
-            {week.workouts.map((workout, i) => (
-              <View
-                key={workout.id}
-                style={[
-                  styles.workoutDetail,
-                  { backgroundColor: theme.colors.surfaceVariant + "30" },
-                ]}
-              >
-                <Text variant="titleSmall" style={styles.workoutTitle}>
-                  {workout.title}
-                </Text>
-                <Text variant="bodySmall" style={styles.workoutBody}>
-                  {workout.body_skeleton || workout.body || "No content"}
-                </Text>
-                {week.status === "skeleton" && (
-                  <View
-                    style={[
-                      styles.skeletonNote,
-                      {
-                        backgroundColor: theme.colors.tertiaryContainer + "30",
-                      },
-                    ]}
-                  >
-                    <Text
-                      variant="labelSmall"
-                      style={{ color: theme.colors.onTertiaryContainer }}
+            {week.workouts.map((workout) => {
+              // For detailed workouts with programId, use WorkoutCard with actions
+              if (week.status === "detailed" && programId) {
+                // Convert TwoPhaseWorkout to Workout type
+                const workoutForCard: Workout = {
+                  ...workout,
+                  tags: Array.isArray(workout.tags) ? workout.tags : [],
+                };
+                return (
+                  <WorkoutCard
+                    key={workout.id}
+                    workout={workoutForCard}
+                    programId={programId}
+                    onDelete={onDeleteWorkout}
+                    onToggleComplete={onToggleComplete}
+                    onChangeDate={onChangeDateWorkout}
+                  />
+                );
+              }
+
+              // For skeleton workouts, show simple view
+              return (
+                <View
+                  key={workout.id}
+                  style={[
+                    styles.workoutDetail,
+                    { backgroundColor: theme.colors.surfaceVariant + "30" },
+                  ]}
+                >
+                  <Text variant="titleSmall" style={styles.workoutTitle}>
+                    {workout.title}
+                  </Text>
+                  <Text variant="bodySmall" style={styles.workoutBody}>
+                    {workout.body_skeleton || workout.body || "No content"}
+                  </Text>
+                  {week.status === "skeleton" && (
+                    <View
+                      style={[
+                        styles.skeletonNote,
+                        {
+                          backgroundColor: theme.colors.tertiaryContainer + "30",
+                        },
+                      ]}
                     >
-                      Skeleton version - Click "Add Full Details" to add
-                      coaching cues, warm-up, cool-down, and scaling options.
-                    </Text>
-                  </View>
-                )}
-              </View>
-            ))}
+                      <Text
+                        variant="labelSmall"
+                        style={{ color: theme.colors.onTertiaryContainer }}
+                      >
+                        Skeleton version - Click "Add Full Details" to add
+                        coaching cues, warm-up, cool-down, and scaling options.
+                      </Text>
+                    </View>
+                  )}
+                </View>
+              );
+            })}
           </View>
         )}
 
