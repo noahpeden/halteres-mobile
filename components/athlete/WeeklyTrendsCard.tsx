@@ -4,6 +4,7 @@ import { Text, Surface, ActivityIndicator } from "react-native-paper";
 import { ChevronDown, ChevronUp, TrendingUp, Target, Trophy, Sparkles } from "lucide-react-native";
 import { AuthContext } from "@/components/providers/AuthProvider";
 import { brandColors } from "@/app/_layout";
+import { API_BASE } from "@/lib/api/getApiUrl";
 
 type WeeklyTrends = {
   hasData: boolean;
@@ -34,7 +35,7 @@ export default function WeeklyTrendsCard() {
 
     try {
       const res = await fetch(
-        `${process.env.EXPO_PUBLIC_SUPABASE_URL?.replace('supabase.co', 'vercel.app') || 'https://halteres.ai'}/api/athlete/weekly-trends`,
+        `${API_BASE}/api/athlete/weekly-trends`,
         {
           headers: {
             Authorization: `Bearer ${user.id}`,

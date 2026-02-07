@@ -12,8 +12,7 @@ import {
 import { SafeAreaView } from "react-native-safe-area-context";
 import { AuthContext } from "@/components/providers/AuthProvider";
 import { brandColors } from "@/app/_layout";
-
-const API_BASE_URL = process.env.EXPO_PUBLIC_API_URL || "https://halteres.ai";
+import { API_BASE } from "@/lib/api/getApiUrl";
 
 // Types
 type Overview = {
@@ -191,10 +190,10 @@ function GymOverviewTab({ gymId }: { gymId: string }) {
   const fetchData = useCallback(async () => {
     try {
       const [overviewRes, prsRes, partRes, perfRes] = await Promise.all([
-        fetch(`${API_BASE_URL}/api/analytics/overview?gymId=${gymId}`),
-        fetch(`${API_BASE_URL}/api/analytics/prs?gymId=${gymId}&limit=5`),
-        fetch(`${API_BASE_URL}/api/analytics/participation?gymId=${gymId}&days=7`),
-        fetch(`${API_BASE_URL}/api/analytics/top-performers?gymId=${gymId}&limit=5`),
+        fetch(`${API_BASE}/api/analytics/overview?gymId=${gymId}`),
+        fetch(`${API_BASE}/api/analytics/prs?gymId=${gymId}&limit=5`),
+        fetch(`${API_BASE}/api/analytics/participation?gymId=${gymId}&days=7`),
+        fetch(`${API_BASE}/api/analytics/top-performers?gymId=${gymId}&limit=5`),
       ]);
 
       const [overviewData, prsData, partData, perfData] = await Promise.all([
@@ -351,7 +350,7 @@ function ProgramAnalyticsTab({ gymId }: { gymId: string }) {
 
   const fetchPrograms = async () => {
     try {
-      const res = await fetch(`${API_BASE_URL}/api/analytics/programs?gymId=${gymId}`);
+      const res = await fetch(`${API_BASE}/api/analytics/programs?gymId=${gymId}`);
       const data = await res.json();
       if (data.success) {
         setPrograms(data.data);
@@ -370,7 +369,7 @@ function ProgramAnalyticsTab({ gymId }: { gymId: string }) {
     if (!selectedProgramId) return;
     setLoadingAnalytics(true);
     try {
-      const res = await fetch(`${API_BASE_URL}/api/analytics/program?programId=${selectedProgramId}&gymId=${gymId}`);
+      const res = await fetch(`${API_BASE}/api/analytics/program?programId=${selectedProgramId}&gymId=${gymId}`);
       const data = await res.json();
       if (data.success) {
         setAnalytics(data.data);
@@ -519,9 +518,9 @@ function AthleteAnalyticsTab({ gymId }: { gymId: string }) {
 
   const fetchAthletes = async () => {
     try {
-      const res = await fetch(`${API_BASE_URL}/api/analytics/overview?gymId=${gymId}`);
+      const res = await fetch(`${API_BASE}/api/analytics/overview?gymId=${gymId}`);
       // Use top-performers endpoint to get athletes list
-      const perfRes = await fetch(`${API_BASE_URL}/api/analytics/top-performers?gymId=${gymId}&limit=50`);
+      const perfRes = await fetch(`${API_BASE}/api/analytics/top-performers?gymId=${gymId}&limit=50`);
       const perfData = await perfRes.json();
       if (perfData.success) {
         const athleteList = perfData.data.map((p: Performer) => ({
@@ -547,7 +546,7 @@ function AthleteAnalyticsTab({ gymId }: { gymId: string }) {
     if (!selectedAthleteId) return;
     setLoadingAnalytics(true);
     try {
-      const res = await fetch(`${API_BASE_URL}/api/analytics/athlete?athleteId=${selectedAthleteId}&gymId=${gymId}`);
+      const res = await fetch(`${API_BASE}/api/analytics/athlete?athleteId=${selectedAthleteId}&gymId=${gymId}`);
       const data = await res.json();
       if (data.success) {
         setAnalytics(data.data);

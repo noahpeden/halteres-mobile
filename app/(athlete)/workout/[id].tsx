@@ -20,6 +20,7 @@ import { ChevronLeft } from "lucide-react-native";
 import { supabase } from "@/lib/supabase/client";
 import { AuthContext } from "@/components/providers/AuthProvider";
 import { brandColors } from "@/app/_layout";
+import { API_BASE } from "@/lib/api/getApiUrl";
 import ResultEntryForm from "@/components/athlete/ResultEntryForm";
 import LeaderboardView from "@/components/athlete/LeaderboardView";
 import PRCelebration from "@/components/athlete/PRCelebration";
@@ -162,7 +163,7 @@ export default function WorkoutDetailScreen() {
 
     // Auto-trigger AI feedback generation in the background
     try {
-      fetch(`${process.env.EXPO_PUBLIC_WEB_URL || 'https://halteres.ai'}/api/ai-feedback`, {
+      fetch(`${API_BASE}/api/ai-feedback`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({

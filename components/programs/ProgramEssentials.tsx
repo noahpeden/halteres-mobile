@@ -1,7 +1,8 @@
-import { Info } from "lucide-react-native";
+import { Info, Search } from "lucide-react-native";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { StyleSheet, View } from "react-native";
 import {
+  Button,
   Card,
   Menu,
   Text,
@@ -36,6 +37,7 @@ type ProgramEssentialsProps = {
   onDescriptionChange: (value: string) => void;
   onReferenceInputChange: (value: string) => void;
   onFieldBlur: (field: string) => void;
+  onSearchWorkouts?: () => void;
 };
 
 export function ProgramEssentials({
@@ -48,6 +50,7 @@ export function ProgramEssentials({
   onDescriptionChange,
   onReferenceInputChange,
   onFieldBlur,
+  onSearchWorkouts,
 }: ProgramEssentialsProps) {
   const theme = useTheme();
   const [methodologyMenuVisible, setMethodologyMenuVisible] = useState(false);
@@ -59,8 +62,12 @@ export function ProgramEssentials({
   const [localReferenceInput, setLocalReferenceInput] =
     useState(referenceInput);
 
-  const descriptionTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const referenceTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const descriptionTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(
+    null,
+  );
+  const referenceTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(
+    null,
+  );
 
   // Sync local state with props
   useEffect(() => {
@@ -271,6 +278,16 @@ export function ProgramEssentials({
             We use this for Retrieval Augmented Generation (RAG) to match
             relevant workouts.
           </Text>
+          {onSearchWorkouts && (
+            <Button
+              mode="outlined"
+              onPress={onSearchWorkouts}
+              style={styles.searchButton}
+              icon={() => <Search size={18} color={theme.colors.primary} />}
+            >
+              Search Reference Workouts
+            </Button>
+          )}
         </View>
       </Card.Content>
     </Card>
@@ -317,5 +334,8 @@ const styles = StyleSheet.create({
   },
   textArea: {
     backgroundColor: "transparent",
+  },
+  searchButton: {
+    marginTop: 8,
   },
 });
