@@ -27,6 +27,11 @@ export type SessionDetails = {
   duration_minutes?: number;
 };
 
+export type ProgramGym = {
+  id: string;
+  name: string;
+};
+
 export type Program = {
   id: string;
   name: string;
@@ -50,6 +55,8 @@ export type Program = {
   gym_details?: GymDetails;
   periodization?: Periodization;
   session_details?: SessionDetails;
+  gym_id?: string | null;
+  gym?: ProgramGym | null;
 };
 
 export function usePrograms() {
@@ -79,10 +86,13 @@ export function usePrograms() {
 
       const entityIds = entities.map((e) => e.id);
 
-      // Then get programs for those entities
+      // Then get programs for those entities, including gym data
       const { data, error } = await supabase
         .from("programs")
-        .select("*")
+        .select(`
+          *,
+          gym:gyms (id, name)
+        `)
         .in("entity_id", entityIds)
         .is("deleted_at", null)
         .order("created_at", { ascending: false });
@@ -152,6 +162,7 @@ export function useCreateProgram() {
         entity_id: data.client_id,
         duration_weeks: data.duration_weeks,
         description: data.description || null,
+        gym_id: data.gym_id || null,
         training_methodology: null,
         difficulty: "intermediate",
         focus_area: null,
@@ -233,6 +244,37 @@ export function useDeleteProgram() {
       const { error } = await supabase.from("programs").delete().eq("id", id);
 
       if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["programs"] });
+    },
+  });
+}
+
+export function useAssignProgramToGym() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async ({
+      programId,
+      gymId,
+    }: {
+      programId: string;
+      gymId: string | null;
+    }) => {
+      const { data, error } = await supabase
+        .from("programs")
+        .update({ gym_id: gymId })
+        .eq("id", programId)
+        .select(`
+          *,
+          gym:gyms (id, name)
+        `)
+        .single();
+
+      if (error) throw error;
+
+      return data as Program;
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["programs"] });

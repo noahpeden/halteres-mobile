@@ -6,6 +6,7 @@ import {
   RefreshControl,
   Share,
   Alert,
+  Pressable,
 } from "react-native";
 import {
   Text,
@@ -21,9 +22,11 @@ import {
 } from "react-native-paper";
 import { SafeAreaView } from "react-native-safe-area-context";
 import * as Clipboard from "expo-clipboard";
+import { FileText, Plus, Minus } from "lucide-react-native";
 import { AuthContext } from "@/components/providers/AuthProvider";
 import { supabase } from "@/lib/supabase/client";
 import { brandColors } from "@/app/_layout";
+import { usePrograms, useAssignProgramToGym, type Program } from "@/hooks/usePrograms";
 
 type Member = {
   id: string;
@@ -347,6 +350,7 @@ export default function GymManagementScreen() {
           onValueChange={setActiveTab}
           buttons={[
             { value: "invite", label: "Invite" },
+            { value: "programs", label: "Programs" },
             { value: "members", label: `Members (${members.length})` },
             { value: "settings", label: "Settings" },
           ]}
@@ -443,6 +447,11 @@ export default function GymManagementScreen() {
               </View>
             )}
           </Surface>
+        )}
+
+        {/* Programs Tab */}
+        {activeTab === "programs" && (
+          <ProgramsTab gymId={currentGym.id} />
         )}
 
         {/* Members Tab */}
@@ -554,6 +563,119 @@ function generateInviteCode(length = 6) {
     code += chars.charAt(Math.floor(Math.random() * chars.length));
   }
   return code;
+}
+
+function ProgramsTab({ gymId }: { gymId: string }) {
+  const { data: programs, isLoading, refetch } = usePrograms();
+  const assignProgram = useAssignProgramToGym();
+
+  const unassignedPrograms = programs?.filter((p) => !p.gym_id) || [];
+  const assignedPrograms = programs?.filter((p) => p.gym_id === gymId) || [];
+
+  const handleAssign = async (program: Program) => {
+    try {
+      await assignProgram.mutateAsync({ programId: program.id, gymId });
+    } catch (err: any) {
+      Alert.alert("Error", err.message || "Failed to assign program");
+    }
+  };
+
+  const handleUnassign = async (program: Program) => {
+    try {
+      await assignProgram.mutateAsync({ programId: program.id, gymId: null });
+    } catch (err: any) {
+      Alert.alert("Error", err.message || "Failed to unassign program");
+    }
+  };
+
+  if (isLoading) {
+    return (
+      <Surface style={styles.card} elevation={2}>
+        <ActivityIndicator size="large" color={brandColors.smartBlue.DEFAULT} />
+      </Surface>
+    );
+  }
+
+  return (
+    <View style={styles.programsContainer}>
+      {/* Assigned Programs */}
+      <Surface style={styles.card} elevation={2}>
+        <Text variant="titleMedium" style={styles.cardTitle}>
+          Assigned to This Gym
+        </Text>
+        {assignedPrograms.length === 0 ? (
+          <Text variant="bodyMedium" style={styles.emptyText}>
+            No programs assigned to this gym yet
+          </Text>
+        ) : (
+          assignedPrograms.map((program) => (
+            <View key={program.id} style={styles.programRow}>
+              <View style={styles.programInfo}>
+                <View style={styles.programIconContainer}>
+                  <FileText size={18} color={brandColors.smartBlue.DEFAULT} />
+                </View>
+                <View style={styles.programText}>
+                  <Text variant="bodyLarge" style={styles.programName}>
+                    {program.name}
+                  </Text>
+                  <Text variant="bodySmall" style={styles.programMeta}>
+                    {program.duration_weeks} weeks
+                  </Text>
+                </View>
+              </View>
+              <Pressable
+                onPress={() => handleUnassign(program)}
+                style={styles.unassignButton}
+                disabled={assignProgram.isPending}
+              >
+                <Minus size={16} color="#fff" />
+              </Pressable>
+            </View>
+          ))
+        )}
+      </Surface>
+
+      {/* Unassigned Programs */}
+      <Surface style={styles.card} elevation={2}>
+        <Text variant="titleMedium" style={styles.cardTitle}>
+          Available Programs
+        </Text>
+        <Text variant="bodySmall" style={styles.cardSubtitle}>
+          Programs not assigned to any gym
+        </Text>
+        {unassignedPrograms.length === 0 ? (
+          <Text variant="bodyMedium" style={styles.emptyText}>
+            All programs are assigned
+          </Text>
+        ) : (
+          unassignedPrograms.map((program) => (
+            <View key={program.id} style={styles.programRow}>
+              <View style={styles.programInfo}>
+                <View style={[styles.programIconContainer, styles.programIconUnassigned]}>
+                  <FileText size={18} color={brandColors.practicalGray.DEFAULT} />
+                </View>
+                <View style={styles.programText}>
+                  <Text variant="bodyLarge" style={styles.programName}>
+                    {program.name}
+                  </Text>
+                  <Text variant="bodySmall" style={styles.programMeta}>
+                    {program.duration_weeks} weeks
+                  </Text>
+                </View>
+              </View>
+              <Pressable
+                onPress={() => handleAssign(program)}
+                style={styles.assignButton}
+                disabled={assignProgram.isPending}
+              >
+                <Plus size={16} color="#fff" />
+              </Pressable>
+            </View>
+          ))
+        )}
+      </Surface>
+    </View>
+  );
 }
 
 const styles = StyleSheet.create({
@@ -673,5 +795,60 @@ const styles = StyleSheet.create({
     textAlign: "center",
     opacity: 0.6,
     paddingVertical: 24,
+  },
+  programsContainer: {
+    gap: 16,
+  },
+  programRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    paddingVertical: 12,
+    borderBottomWidth: 1,
+    borderBottomColor: "#f0f0f0",
+  },
+  programInfo: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 12,
+    flex: 1,
+  },
+  programIconContainer: {
+    width: 40,
+    height: 40,
+    borderRadius: 10,
+    backgroundColor: brandColors.smartBlue.container,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  programIconUnassigned: {
+    backgroundColor: brandColors.practicalGray.lighter,
+  },
+  programText: {
+    flex: 1,
+  },
+  programName: {
+    fontWeight: "600",
+    color: "#121212",
+  },
+  programMeta: {
+    color: brandColors.practicalGray.DEFAULT,
+    marginTop: 2,
+  },
+  assignButton: {
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    backgroundColor: brandColors.thrivingGreen.DEFAULT,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  unassignButton: {
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    backgroundColor: brandColors.helpfulOrange.DEFAULT,
+    alignItems: "center",
+    justifyContent: "center",
   },
 });

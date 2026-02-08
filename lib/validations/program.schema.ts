@@ -8,6 +8,7 @@ export const programSchema = z.object({
     .min(1, "Duration must be at least 1 week")
     .max(8, "Duration cannot exceed 8 weeks"),
   client_id: z.string().min(1, "Please select a client or class"),
+  gym_id: z.string().optional().nullable(),
 });
 
 export type ProgramInput = z.infer<typeof programSchema>;

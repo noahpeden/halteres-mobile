@@ -8,11 +8,12 @@ import {
   ChevronDown,
   Clock,
   FileText,
+  Home,
   Plus,
   User,
   Users,
 } from "lucide-react-native";
-import { useState } from "react";
+import { useState, useContext } from "react";
 import { Controller, useForm } from "react-hook-form";
 import {
   Alert,
@@ -37,6 +38,7 @@ import {
 } from "react-native-paper";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { AddClientModal } from "@/components/dashboard/AddClientModal";
+import { AuthContext } from "@/components/providers/AuthProvider";
 import { useClients } from "@/hooks/useClients";
 import { useCreateProgram } from "@/hooks/usePrograms";
 import {
@@ -49,6 +51,7 @@ const AnimatedPressable = Animated.createAnimatedComponent(Pressable);
 
 export default function CreateProgramScreen() {
   const router = useRouter();
+  const { gymMemberships, currentGym } = useContext(AuthContext);
   const createProgram = useCreateProgram();
   const { data: clients, isLoading: clientsLoading, refetch } = useClients();
 
@@ -57,6 +60,14 @@ export default function CreateProgramScreen() {
   const [selectedClientName, setSelectedClientName] = useState<string>("");
   const [clientMenuVisible, setClientMenuVisible] = useState(false);
   const [showAddClientModal, setShowAddClientModal] = useState(false);
+  const [selectedGymId, setSelectedGymId] = useState<string | null>(currentGym?.id || null);
+  const [selectedGymName, setSelectedGymName] = useState<string>(currentGym?.name || "");
+  const [gymMenuVisible, setGymMenuVisible] = useState(false);
+
+  // Filter gyms where user is owner or coach
+  const coachGyms = gymMemberships.filter(
+    (m) => m.role === "owner" || m.role === "coach"
+  );
 
   // Group clients by type (matching web app's optgroup pattern)
   const clientsByType = clients?.reduce(
@@ -84,8 +95,16 @@ export default function CreateProgramScreen() {
       description: "",
       duration_weeks: 4,
       client_id: "",
+      gym_id: currentGym?.id || null,
     },
   });
+
+  const handleSelectGym = (gymId: string | null, gymName: string) => {
+    setSelectedGymId(gymId);
+    setSelectedGymName(gymName);
+    setValue("gym_id", gymId);
+    setGymMenuVisible(false);
+  };
 
   const handleSelectClient = (clientId: string, clientName: string) => {
     setSelectedClientId(clientId);
@@ -153,6 +172,7 @@ export default function CreateProgramScreen() {
   const submitScale = useSharedValue(1);
   const cancelScale = useSharedValue(1);
   const selectScale = useSharedValue(1);
+  const gymSelectScale = useSharedValue(1);
 
   const submitAnimatedStyle = useAnimatedStyle(() => ({
     transform: [{ scale: submitScale.value }],
@@ -164,6 +184,10 @@ export default function CreateProgramScreen() {
 
   const selectAnimatedStyle = useAnimatedStyle(() => ({
     transform: [{ scale: selectScale.value }],
+  }));
+
+  const gymSelectAnimatedStyle = useAnimatedStyle(() => ({
+    transform: [{ scale: gymSelectScale.value }],
   }));
 
   return (
@@ -528,6 +552,138 @@ export default function CreateProgramScreen() {
               )}
             />
           </Animated.View>
+
+          {/* Gym Selector Card (Optional) */}
+          {coachGyms.length > 0 && (
+            <Animated.View
+              entering={FadeInDown.duration(300).delay(450)}
+              style={[
+                styles.formCard,
+                !selectedClientId && styles.formCardDisabled,
+              ]}
+              pointerEvents={selectedClientId ? "auto" : "none"}
+            >
+              <View style={styles.formCardHeader}>
+                <View
+                  style={[
+                    styles.formCardIconContainer,
+                    { backgroundColor: "#e8f4fd" },
+                  ]}
+                >
+                  <Home
+                    size={18}
+                    color={brandColors.practicalGray.DEFAULT}
+                    strokeWidth={2}
+                  />
+                </View>
+                <Text variant="titleSmall" style={styles.formCardTitle}>
+                  Assign to Gym (Optional)
+                </Text>
+              </View>
+
+              <Menu
+                visible={gymMenuVisible}
+                onDismiss={() => setGymMenuVisible(false)}
+                contentStyle={styles.menuContent}
+                anchor={
+                  <AnimatedPressable
+                    onPress={() => setGymMenuVisible(true)}
+                    onPressIn={() => {
+                      gymSelectScale.value = withSpring(0.98, {
+                        damping: 15,
+                        stiffness: 300,
+                      });
+                    }}
+                    onPressOut={() => {
+                      gymSelectScale.value = withSpring(1, {
+                        damping: 15,
+                        stiffness: 150,
+                      });
+                    }}
+                    style={[
+                      styles.selectButton,
+                      selectedGymId && styles.selectButtonSelected,
+                      gymSelectAnimatedStyle,
+                    ]}
+                  >
+                    <View style={styles.selectButtonLeft}>
+                      {selectedGymId ? (
+                        <View style={styles.selectedIndicator}>
+                          <Check size={14} color="#fff" strokeWidth={3} />
+                        </View>
+                      ) : (
+                        <Home size={20} color={brandColors.practicalGray.light} />
+                      )}
+                      <Text
+                        style={[
+                          styles.selectButtonText,
+                          selectedGymId && styles.selectButtonTextSelected,
+                        ]}
+                      >
+                        {selectedGymName || "No gym assigned"}
+                      </Text>
+                    </View>
+                    <ChevronDown
+                      size={20}
+                      color={
+                        selectedGymId
+                          ? brandColors.thrivingGreen.DEFAULT
+                          : brandColors.practicalGray.light
+                      }
+                    />
+                  </AnimatedPressable>
+                }
+              >
+                {/* No Gym Option */}
+                <Menu.Item
+                  onPress={() => handleSelectGym(null, "")}
+                  title="No gym assigned"
+                  titleStyle={styles.menuItemTitle}
+                  leadingIcon={
+                    !selectedGymId
+                      ? () => (
+                          <Check
+                            size={16}
+                            color={brandColors.thrivingGreen.DEFAULT}
+                          />
+                        )
+                      : undefined
+                  }
+                />
+                <Divider style={styles.menuDivider} />
+
+                {/* Gym Options */}
+                <View style={styles.menuGroupHeader}>
+                  <Home size={14} color={brandColors.practicalGray.light} />
+                  <Text style={styles.menuGroupTitle}>Your Gyms</Text>
+                </View>
+                {coachGyms.map((membership) => (
+                  <Menu.Item
+                    key={membership.gym.id}
+                    onPress={() =>
+                      handleSelectGym(membership.gym.id, membership.gym.name)
+                    }
+                    title={membership.gym.name}
+                    titleStyle={styles.menuItemTitle}
+                    leadingIcon={
+                      selectedGymId === membership.gym.id
+                        ? () => (
+                            <Check
+                              size={16}
+                              color={brandColors.thrivingGreen.DEFAULT}
+                            />
+                          )
+                        : undefined
+                    }
+                  />
+                ))}
+              </Menu>
+
+              <Text style={styles.fieldHint}>
+                Assign this program to a gym you coach
+              </Text>
+            </Animated.View>
+          )}
 
           {/* Action Buttons */}
           <Animated.View

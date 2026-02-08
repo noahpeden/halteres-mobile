@@ -1,4 +1,4 @@
-import { useState, useEffect, useContext, useCallback } from "react";
+import { useState, useEffect, useContext, useCallback, useMemo } from "react";
 import {
   View,
   StyleSheet,
@@ -26,7 +26,9 @@ import LeaderboardView from "@/components/athlete/LeaderboardView";
 import PRCelebration from "@/components/athlete/PRCelebration";
 import AIFeedbackCard from "@/components/athlete/AIFeedbackCard";
 import { TemplateFeedbackButton, ResultFeedbackCard } from "@/components/feedback";
+import { SectionButtons, TVDisplayMode, useTVDisplay } from "@/components/tv-display";
 import { parseMarkdownContent } from "@/lib/utils/markdownParser";
+import { parseWorkoutSections } from "@/lib/utils/workoutParser";
 
 type Tab = "workout" | "log" | "leaderboard";
 
@@ -68,6 +70,13 @@ export default function WorkoutDetailScreen() {
   const [activeTab, setActiveTab] = useState<Tab>("workout");
   const [showPRCelebration, setShowPRCelebration] = useState(false);
   const [prData, setPrData] = useState<any>(null);
+
+  // TV Display Mode - Parse sections from workout description
+  const sections = useMemo(
+    () => parseWorkoutSections(workout?.description),
+    [workout?.description]
+  );
+  const tvDisplay = useTVDisplay(sections);
 
   const fetchWorkoutData = useCallback(async () => {
     if (!id || !user?.id) return;
@@ -306,6 +315,16 @@ export default function WorkoutDetailScreen() {
                 showStats
               />
             </View>
+
+            {/* TV Display Section Buttons */}
+            {sections.length > 0 && (
+              <View style={styles.tvDisplayContainer}>
+                <SectionButtons
+                  sections={sections}
+                  onOpenSection={tvDisplay.openSection}
+                />
+              </View>
+            )}
           </Surface>
 
           {/* Exercises */}
@@ -433,6 +452,19 @@ export default function WorkoutDetailScreen() {
           />
         </View>
       )}
+
+      {/* TV Display Mode */}
+      <TVDisplayMode
+        isOpen={tvDisplay.isOpen}
+        currentSection={tvDisplay.currentSection}
+        sections={sections}
+        currentSectionId={tvDisplay.currentSectionId}
+        workoutTitle={workout?.name || "Workout"}
+        onClose={tvDisplay.close}
+        onNext={tvDisplay.goToNext}
+        onPrevious={tvDisplay.goToPrevious}
+        onGoToSection={tvDisplay.goToSection}
+      />
     </SafeAreaView>
   );
 }
@@ -545,6 +577,12 @@ const styles = StyleSheet.create({
     marginTop: 4,
   },
   templateFeedbackContainer: {
+    marginTop: 12,
+    paddingTop: 12,
+    borderTopWidth: 1,
+    borderTopColor: "#e0e0e0",
+  },
+  tvDisplayContainer: {
     marginTop: 12,
     paddingTop: 12,
     borderTopWidth: 1,

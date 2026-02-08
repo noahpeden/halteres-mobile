@@ -1,5 +1,5 @@
 import { useRouter } from "expo-router";
-import { Calendar, ChevronRight, Dumbbell, User } from "lucide-react-native";
+import { Calendar, ChevronRight, Dumbbell, Home, User } from "lucide-react-native";
 import { Pressable, StyleSheet, View } from "react-native";
 import Animated, {
   useAnimatedStyle,
@@ -17,6 +17,11 @@ type ProgramCardProps = {
     duration_weeks: number;
     client_name?: string;
     workout_count?: number;
+    gym_id?: string | null;
+    gym?: {
+      id: string;
+      name: string;
+    } | null;
   };
 };
 
@@ -104,6 +109,19 @@ export function ProgramCard({ program }: ProgramCardProps) {
                   </Text>
                 </View>
               )}
+
+            {program.gym && (
+              <View style={[styles.metaItem, styles.metaItemGym]}>
+                <Home
+                  size={14}
+                  color={brandColors.practicalGray.DEFAULT}
+                  strokeWidth={2}
+                />
+                <Text variant="labelSmall" style={styles.metaTextGym}>
+                  {program.gym.name}
+                </Text>
+              </View>
+            )}
           </View>
         </View>
       </View>
@@ -182,6 +200,13 @@ const styles = StyleSheet.create({
   },
   metaTextTertiary: {
     color: brandColors.helpfulOrange.dark,
+    fontWeight: "600",
+  },
+  metaItemGym: {
+    backgroundColor: "#f0f0f0",
+  },
+  metaTextGym: {
+    color: brandColors.practicalGray.dark,
     fontWeight: "600",
   },
 });

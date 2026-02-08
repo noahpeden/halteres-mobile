@@ -9,7 +9,7 @@ import {
   Trash2,
   X,
 } from "lucide-react-native";
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import {
   Alert,
   ScrollView,
@@ -33,9 +33,11 @@ import { SafeAreaView } from "react-native-safe-area-context";
 
 import { EnhanceWorkoutModal } from "@/components/workouts/EnhanceWorkoutModal";
 import { TemplateFeedbackButton } from "@/components/feedback";
+import { SectionButtons, TVDisplayMode, useTVDisplay } from "@/components/tv-display";
 import { useProgramDataMobile } from "@/hooks/useProgramDataMobile";
 import { useWorkout } from "@/hooks/useWorkout";
 import { parseMarkdownContent } from "@/lib/utils/markdownParser";
+import { parseWorkoutSections } from "@/lib/utils/workoutParser";
 
 type EnhancedWorkout = {
   title: string;
@@ -64,6 +66,13 @@ export default function WorkoutDetailScreen() {
   } = useWorkout(workoutId);
 
   const { program } = useProgramDataMobile(programId);
+
+  // TV Display Mode - Parse sections from workout body
+  const sections = useMemo(
+    () => parseWorkoutSections(workout?.body),
+    [workout?.body]
+  );
+  const tvDisplay = useTVDisplay(sections);
 
   // Edit mode state - initialize from query param if present
   const [isEditing, setIsEditing] = useState(edit === "true");
@@ -400,6 +409,14 @@ export default function WorkoutDetailScreen() {
                   />
                 </View>
 
+                {/* TV Display Section Buttons */}
+                {sections.length > 0 && (
+                  <SectionButtons
+                    sections={sections}
+                    onOpenSection={tvDisplay.openSection}
+                  />
+                )}
+
                 <Divider style={styles.divider} />
 
                 <View style={styles.bodyContainer}>
@@ -495,6 +512,19 @@ export default function WorkoutDetailScreen() {
         enhancedWorkout={enhancedWorkout}
         originalTitle={workout.title}
         originalBody={workout.body || workout.body_skeleton || ""}
+      />
+
+      {/* TV Display Mode */}
+      <TVDisplayMode
+        isOpen={tvDisplay.isOpen}
+        currentSection={tvDisplay.currentSection}
+        sections={sections}
+        currentSectionId={tvDisplay.currentSectionId}
+        workoutTitle={workout?.title || "Workout"}
+        onClose={tvDisplay.close}
+        onNext={tvDisplay.goToNext}
+        onPrevious={tvDisplay.goToPrevious}
+        onGoToSection={tvDisplay.goToSection}
       />
     </SafeAreaView>
   );
