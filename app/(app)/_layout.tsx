@@ -148,6 +148,13 @@ export default function AppLayout() {
           href: null,
         }}
       />
+      {/* Hide change-password from tab bar - accessed via Profile */}
+      <Tabs.Screen
+        name="change-password"
+        options={{
+          href: null,
+        }}
+      />
     </Tabs>
   );
 }

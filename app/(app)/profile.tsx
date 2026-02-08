@@ -322,7 +322,7 @@ export default function ProfileScreen() {
               <List.Icon {...props} icon={() => <Shield size={20} color={brandColors.smartBlue.DEFAULT} />} />
             )}
             right={() => <ChevronRight size={20} color={brandColors.practicalGray.light} />}
-            onPress={() => router.push("/(auth)/reset-password")}
+            onPress={() => router.push("/(app)/change-password")}
             style={styles.listItem}
           />
         </Surface>

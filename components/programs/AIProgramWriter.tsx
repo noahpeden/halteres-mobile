@@ -1,6 +1,7 @@
 import { useRouter } from "expo-router";
 import { AlertTriangle } from "lucide-react-native";
 import { useCallback, useEffect, useMemo, useState } from "react";
+import type { TwoPhaseWorkout } from "@/lib/types/twoPhaseGeneration";
 import { Alert, ScrollView, StyleSheet, View } from "react-native";
 import {
   ActivityIndicator,
@@ -172,6 +173,48 @@ export function AIProgramWriter({ programId }: AIProgramWriterProps) {
 
   // State for showing skeleton preview vs workout list
   const [showSkeletonPreview, setShowSkeletonPreview] = useState(false);
+
+  // Check for existing skeleton workouts and auto-show enhance UI
+  const existingSkeletonWorkouts = useMemo(() => {
+    return workouts.filter((w) => w.generation_status === "skeleton");
+  }, [workouts]);
+
+  const hasSkeletonWorkouts = existingSkeletonWorkouts.length > 0;
+
+  // Convert existing workouts to TwoPhaseWorkout format for SkeletonPreview
+  const workoutsForPreview = useMemo((): TwoPhaseWorkout[] => {
+    if (skeletonWorkouts.length > 0) {
+      return skeletonWorkouts;
+    }
+
+    // Get start date from formState or program
+    const startDateStr = formState?.startDate || program?.calendar_data?.start_date || program?.start_date;
+
+    // Calculate week number from scheduled_date if not set
+    const calculateWeekNumber = (scheduledDate?: string): number => {
+      if (!scheduledDate || !startDateStr) return 1;
+      const start = new Date(startDateStr);
+      const workoutDate = new Date(scheduledDate);
+      const diffTime = workoutDate.getTime() - start.getTime();
+      const diffDays = Math.floor(diffTime / (1000 * 60 * 60 * 24));
+      return Math.max(1, Math.floor(diffDays / 7) + 1);
+    };
+
+    // Convert existing workouts to TwoPhaseWorkout format
+    return workouts.map((w) => ({
+      id: w.id,
+      program_id: programId,
+      title: w.title,
+      body: w.body || null,
+      body_skeleton: w.body_skeleton || w.body || null,
+      generation_status: (w.generation_status || "detailed") as "skeleton" | "detailed",
+      week_number: w.week_number || calculateWeekNumber(w.scheduled_date),
+      scheduled_date: w.scheduled_date,
+      is_reference: false,
+      created_at: w.created_at || new Date().toISOString(),
+      updated_at: w.updated_at || new Date().toISOString(),
+    }));
+  }, [workouts, skeletonWorkouts, programId, formState?.startDate, program]);
 
   // Form state
   const [formState, setFormState] = useState<FormState>(defaultFormState);
@@ -474,31 +517,53 @@ export function AIProgramWriter({ programId }: AIProgramWriterProps) {
   // Options: { includeEnhanced: boolean } - if true, re-enhances already-enhanced weeks
   const handleEnhanceAll = useCallback(
     async (options?: { includeEnhanced?: boolean }) => {
-      const equipmentNames = formState.equipment
-        .map((id) => equipmentList.find((e) => e.value === id)?.label)
-        .filter((label): label is string => !!label);
+      const { includeEnhanced = false } = options || {};
 
-      const result = await enhanceAllRemaining(
-        {
+      // Import groupWorkoutsByWeek dynamically to group workouts
+      const { groupWorkoutsByWeek } = await import("@/lib/types/twoPhaseGeneration");
+      const weeks = groupWorkoutsByWeek(workoutsForPreview);
+
+      // Filter based on options - either all weeks or just skeleton weeks
+      const weeksToEnhance = includeEnhanced
+        ? weeks
+        : weeks.filter((w) => w.status === "skeleton");
+
+      if (weeksToEnhance.length === 0) {
+        setSnackbarMessage("All weeks are already enhanced!");
+        return;
+      }
+
+      let totalEnhanced = 0;
+
+      // Enhance each week sequentially
+      for (const week of weeksToEnhance) {
+        const workoutIds = week.workouts.map((w) => w.id);
+
+        const equipmentNames = formState.equipment
+          .map((id) => equipmentList.find((e) => e.value === id)?.label)
+          .filter((label): label is string => !!label);
+
+        const result = await enhanceWeek(week.weekNumber, workoutIds, {
           goal: formState.goal,
           difficulty: formState.difficulty,
           equipment: equipmentNames,
           trainingMethodology: formState.trainingMethodology,
-        },
-        options,
-      );
+          useImperial: true,
+        });
 
-      if (result.success) {
-        setSnackbarMessage(
-          `Enhanced all remaining weeks (${result.workoutsCreated} workouts)`,
-        );
-        setShowSkeletonPreview(false);
-        refetchWorkouts();
-      } else {
-        setSnackbarMessage(`Enhancement failed: ${result.error}`);
+        if (!result.success) {
+          setSnackbarMessage(`Enhancement failed on Week ${week.weekNumber}: ${result.error}`);
+          refetchWorkouts();
+          return;
+        }
+        totalEnhanced += result.workoutsCreated;
       }
+
+      setSnackbarMessage(`Enhanced all weeks (${totalEnhanced} workouts)`);
+      setShowSkeletonPreview(false);
+      refetchWorkouts();
     },
-    [formState, enhanceAllRemaining, refetchWorkouts],
+    [formState, workoutsForPreview, enhanceWeek, refetchWorkouts],
   );
 
   // Handle skeleton preview complete (view program)
@@ -632,10 +697,10 @@ export function AIProgramWriter({ programId }: AIProgramWriterProps) {
           onComplete={() => setShowSkeletonPreview(true)}
         />
 
-        {/* Skeleton Preview (shown after skeleton generation) */}
-        {showSkeletonPreview && isSkeletonComplete && (
+        {/* Skeleton Preview (shown after skeleton generation OR when existing skeleton workouts exist) */}
+        {(showSkeletonPreview && isSkeletonComplete) || (hasSkeletonWorkouts && !isGenerating) ? (
           <SkeletonPreview
-            workouts={skeletonWorkouts}
+            workouts={workoutsForPreview}
             weekNotes={weekNotes}
             onWeekNoteChange={setWeekNote}
             onEnhanceWeek={handleEnhanceWeek}
@@ -654,7 +719,7 @@ export function AIProgramWriter({ programId }: AIProgramWriterProps) {
               console.log("Change date for workout:", workoutId, currentDate);
             }}
           />
-        )}
+        ) : null}
 
         {/* Form Sections */}
         <ProgramEssentials

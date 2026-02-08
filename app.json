@@ -18,7 +18,7 @@
     ],
     "ios": {
       "supportsTablet": true,
-      "bundleIdentifier": "com.halteres.mobile",
+      "bundleIdentifier": "ai.halteres",
       "buildNumber": "1",
       "infoPlist": {
         "NSCameraUsageDescription": "Halteres needs camera access to let you take photos for your workout logs and profile.",
