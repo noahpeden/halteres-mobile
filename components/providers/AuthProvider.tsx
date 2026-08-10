@@ -1,5 +1,4 @@
 import type { Session, User } from "@supabase/supabase-js";
-import AsyncStorage from "@react-native-async-storage/async-storage";
 import {
   createContext,
   type PropsWithChildren,
@@ -36,25 +35,6 @@ type Profile = {
   injury_history: string | null;
 };
 
-type Gym = {
-  id: string;
-  name: string;
-  description: string | null;
-  logo_url: string | null;
-  invite_code: string | null;
-  owner_id: string;
-};
-
-type GymMembership = {
-  id: string;
-  role: "owner" | "coach" | "athlete";
-  status: "pending" | "active" | "suspended" | "left";
-  joined_at: string | null;
-  nickname: string | null;
-  class_id: string | null;
-  gym: Gym;
-};
-
 type AthleteMetrics = {
   bench_1rm: number | null;
   squat_1rm: number | null;
@@ -80,15 +60,7 @@ type AuthContextType = {
   refetchProfile: () => Promise<void>;
   // Role
   role: UserRole;
-  isCoach: boolean;
   isAthlete: boolean;
-  // Gym
-  gymMemberships: GymMembership[];
-  currentGym: Gym | null;
-  switchGym: (gym: Gym) => void;
-  isGymOwner: boolean;
-  loadingGym: boolean;
-  refetchGymMemberships: () => Promise<void>;
   // Athlete metrics
   athleteMetrics: AthleteMetrics | null;
 };
@@ -103,15 +75,8 @@ export const AuthContext = createContext<AuthContextType>({
   profile: null,
   loadingProfile: true,
   refetchProfile: async () => {},
-  role: "coach",
-  isCoach: true,
-  isAthlete: false,
-  gymMemberships: [],
-  currentGym: null,
-  switchGym: () => {},
-  isGymOwner: false,
-  loadingGym: true,
-  refetchGymMemberships: async () => {},
+  role: "athlete",
+  isAthlete: true,
   athleteMetrics: null,
 });
 
@@ -121,9 +86,6 @@ export function AuthProvider({ children }: PropsWithChildren) {
   const [isLoading, setIsLoading] = useState(true);
   const [profile, setProfile] = useState<Profile | null>(null);
   const [loadingProfile, setLoadingProfile] = useState(true);
-  const [gymMemberships, setGymMemberships] = useState<GymMembership[]>([]);
-  const [currentGym, setCurrentGym] = useState<Gym | null>(null);
-  const [loadingGym, setLoadingGym] = useState(true);
 
   // Fetch profile
   const fetchProfile = useCallback(async (userId: string) => {
@@ -164,59 +126,6 @@ export function AuthProvider({ children }: PropsWithChildren) {
     }
   }, []);
 
-  // Fetch gym memberships
-  const fetchGymMemberships = useCallback(async (userId: string) => {
-    if (!userId) {
-      setGymMemberships([]);
-      setCurrentGym(null);
-      setLoadingGym(false);
-      return;
-    }
-    setLoadingGym(true);
-    try {
-      const { data, error } = await supabase
-        .from("gym_memberships")
-        .select(
-          `
-          id, role, status, joined_at, nickname, class_id,
-          gym:gyms (
-            id, name, description, logo_url, invite_code, owner_id
-          )
-        `
-        )
-        .eq("user_id", userId)
-        .eq("status", "active");
-
-      if (error) {
-        console.error("Error fetching gym memberships:", error);
-        setGymMemberships([]);
-      } else {
-        const memberships = (data || []) as GymMembership[];
-        setGymMemberships(memberships);
-
-        // Restore current gym from storage or use first membership
-        const storedGymId = await AsyncStorage.getItem("currentGymId");
-        const storedGym = memberships.find((m) => m.gym?.id === storedGymId);
-        if (storedGym?.gym) {
-          setCurrentGym(storedGym.gym);
-        } else if (memberships.length > 0 && memberships[0]?.gym) {
-          setCurrentGym(memberships[0].gym);
-        }
-      }
-    } catch (error) {
-      console.error("Unexpected error fetching gym memberships:", error);
-      setGymMemberships([]);
-    } finally {
-      setLoadingGym(false);
-    }
-  }, []);
-
-  // Switch gym
-  const switchGym = useCallback((gym: Gym) => {
-    setCurrentGym(gym);
-    AsyncStorage.setItem("currentGymId", gym.id);
-  }, []);
-
   useEffect(() => {
     // Get initial session
     supabase.auth.getSession().then(({ data: { session } }) => {
@@ -226,10 +135,8 @@ export function AuthProvider({ children }: PropsWithChildren) {
 
       if (session?.user?.id) {
         fetchProfile(session.user.id);
-        fetchGymMemberships(session.user.id);
       } else {
         setLoadingProfile(false);
-        setLoadingGym(false);
       }
     });
 
@@ -243,18 +150,14 @@ export function AuthProvider({ children }: PropsWithChildren) {
 
       if (session?.user?.id) {
         fetchProfile(session.user.id);
-        fetchGymMemberships(session.user.id);
       } else {
         setProfile(null);
         setLoadingProfile(false);
-        setGymMemberships([]);
-        setCurrentGym(null);
-        setLoadingGym(false);
       }
     });
 
     return () => subscription.unsubscribe();
-  }, [fetchProfile, fetchGymMemberships]);
+  }, [fetchProfile]);
 
   const signIn = async (email: string, password: string) => {
     const { error } = await supabase.auth.signInWithPassword({
@@ -267,7 +170,7 @@ export function AuthProvider({ children }: PropsWithChildren) {
   const signUp = async (
     email: string,
     password: string,
-    role: UserRole = "coach"
+    role: UserRole = "athlete"
   ) => {
     const { data, error } = await supabase.auth.signUp({
       email,
@@ -292,26 +195,18 @@ export function AuthProvider({ children }: PropsWithChildren) {
         const now = new Date();
         const trialEnd = new Date(now.getTime() + 7 * 24 * 60 * 60 * 1000);
 
-        const profileData =
-          role === "athlete"
-            ? {
-                id: data.user.id,
-                role: "athlete" as const,
-                subscription_status: null,
-                is_active: true,
-                onboarding_completed: false,
-              }
-            : {
-                id: data.user.id,
-                role: "coach" as const,
-                subscription_status: "trialing",
-                trial_start_date: now.toISOString(),
-                trial_end_date: trialEnd.toISOString(),
-                generations_remaining: 15,
-                generations_today: 0,
-                is_active: true,
-                onboarding_completed: false,
-              };
+        // Every self-coached athlete gets a trial with generation credits
+        const profileData = {
+          id: data.user.id,
+          role,
+          subscription_status: "trialing",
+          trial_start_date: now.toISOString(),
+          trial_end_date: trialEnd.toISOString(),
+          generations_remaining: 15,
+          generations_today: 0,
+          is_active: true,
+          onboarding_completed: false,
+        };
 
         const { error: insertError } = await supabase
           .from("profiles")
@@ -322,7 +217,7 @@ export function AuthProvider({ children }: PropsWithChildren) {
         } else {
           console.log("Fallback profile created for role:", role);
         }
-      } else if (role === "athlete") {
+      } else {
         // Profile exists, just update the role if needed
         await supabase
           .from("profiles")
@@ -335,13 +230,10 @@ export function AuthProvider({ children }: PropsWithChildren) {
   const signOut = async () => {
     const { error } = await supabase.auth.signOut();
     if (error) throw error;
-    await AsyncStorage.removeItem("currentGymId");
   };
 
   // Derived values
-  const isCoach = profile?.role === "coach" || !profile?.role;
-  const isAthlete = profile?.role === "athlete";
-  const isGymOwner = gymMemberships.some((m) => m.role === "owner");
+  const isAthlete = true;
 
   const contextValue = useMemo(
     () => ({
@@ -357,48 +249,22 @@ export function AuthProvider({ children }: PropsWithChildren) {
       refetchProfile: () =>
         user?.id ? fetchProfile(user.id) : Promise.resolve(),
       // Role
-      role: (profile?.role || "coach") as UserRole,
-      isCoach,
+      role: (profile?.role || "athlete") as UserRole,
       isAthlete,
-      // Gym
-      gymMemberships,
-      currentGym,
-      switchGym,
-      isGymOwner,
-      loadingGym,
-      refetchGymMemberships: () =>
-        user?.id ? fetchGymMemberships(user.id) : Promise.resolve(),
       // Athlete metrics
-      athleteMetrics: isAthlete
-        ? {
-            bench_1rm: profile?.bench_1rm ?? null,
-            squat_1rm: profile?.squat_1rm ?? null,
-            deadlift_1rm: profile?.deadlift_1rm ?? null,
-            weight_kg: profile?.weight_kg ?? null,
-            height_cm: profile?.height_cm ?? null,
-            mile_time: profile?.mile_time ?? null,
-            gender: profile?.gender ?? null,
-            recovery_score: profile?.recovery_score ?? null,
-            injury_history: profile?.injury_history ?? null,
-          }
-        : null,
+      athleteMetrics: {
+        bench_1rm: profile?.bench_1rm ?? null,
+        squat_1rm: profile?.squat_1rm ?? null,
+        deadlift_1rm: profile?.deadlift_1rm ?? null,
+        weight_kg: profile?.weight_kg ?? null,
+        height_cm: profile?.height_cm ?? null,
+        mile_time: profile?.mile_time ?? null,
+        gender: profile?.gender ?? null,
+        recovery_score: profile?.recovery_score ?? null,
+        injury_history: profile?.injury_history ?? null,
+      },
     }),
-    [
-      user,
-      session,
-      isLoading,
-      profile,
-      loadingProfile,
-      fetchProfile,
-      isCoach,
-      isAthlete,
-      gymMemberships,
-      currentGym,
-      switchGym,
-      isGymOwner,
-      loadingGym,
-      fetchGymMemberships,
-    ]
+    [user, session, isLoading, profile, loadingProfile, fetchProfile, isAthlete]
   );
 
   return (
