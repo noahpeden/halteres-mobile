@@ -3,7 +3,7 @@ import { ActivityIndicator, View } from "react-native";
 import { useAuth } from "@/hooks/useAuth";
 
 export default function Index() {
-  const { user, isLoading, loadingProfile, isAthlete, isCoach } = useAuth();
+  const { user, isLoading, loadingProfile } = useAuth();
 
   // Show loading while checking auth and profile
   if (isLoading || loadingProfile) {
@@ -19,11 +19,6 @@ export default function Index() {
     return <Redirect href="/(auth)/login" />;
   }
 
-  // Route based on user role
-  if (isAthlete) {
-    return <Redirect href="/(athlete)/home" />;
-  }
-
-  // Default to coach dashboard
-  return <Redirect href="/(app)/dashboard" />;
+  // Every user is a self-coached athlete
+  return <Redirect href="/(athlete)/home" />;
 }
