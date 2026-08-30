@@ -30,7 +30,7 @@
       }
     },
     "android": {
-      "package": "ai.halteres",
+      "package": "com.halteres.mobile",
       "versionCode": 10,
       "adaptiveIcon": {
         "foregroundImage": "./assets/adaptive-icon.png",
