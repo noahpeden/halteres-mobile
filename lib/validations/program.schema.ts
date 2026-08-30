@@ -7,7 +7,8 @@ export const programSchema = z.object({
     .number()
     .min(1, "Duration must be at least 1 week")
     .max(52, "Duration cannot exceed 52 weeks"),
-  client_id: z.string().min(1, "Please select a client or class"),
+  // For self-coached athlete, this is the internal athlete entity id
+  client_id: z.string().min(1, "Missing athlete"),
   gym_id: z.string().optional().nullable(),
   // Optional intake fields for bespoke program creation
   difficulty: z.string().optional(), // experience level
