@@ -236,7 +236,7 @@ export function WeekCard({
                         style={{ color: theme.colors.onTertiaryContainer }}
                       >
                         Skeleton version - Click "Add Full Details" to add
-                        coaching cues, warm-up, cool-down, and scaling options.
+                        training cues, warm-up, cool-down, and scaling options.
                       </Text>
                     </View>
                   )}

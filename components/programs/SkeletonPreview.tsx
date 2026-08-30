@@ -210,7 +210,7 @@ export function SkeletonPreview({
               All Weeks Enhanced!
             </Text>
             <Text variant="bodyMedium" style={styles.completeSubtitle}>
-              Your program is ready to use with full coaching details.
+            Your program is ready to use with full training details.
             </Text>
           </Card.Content>
         </Card>

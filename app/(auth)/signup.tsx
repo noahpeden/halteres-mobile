@@ -28,7 +28,7 @@ export default function SignupScreen() {
                   Join HalteresAI
                 </Text>
                 <Text variant="bodyMedium" style={styles.subtitle}>
-                  Access workouts and get AI coaching
+                  Access workouts and AI guidance
                 </Text>
               </View>
 

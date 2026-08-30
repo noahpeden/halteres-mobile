@@ -28,7 +28,7 @@ export function ResultFeedbackCard({
   resultOwnerId,
   currentUserId,
   gymId,
-  showCoachFeedback = true,
+  showCoachFeedback = false,
   compact = false,
 }: ResultFeedbackCardProps) {
   const theme = useTheme();
@@ -78,7 +78,7 @@ export function ResultFeedbackCard({
       <>
         <View style={styles.compactContainer}>
           <Text variant="labelSmall" style={styles.compactLabel}>
-            {isOwnResult ? 'How did it go?' : 'Coach feedback:'}
+            {isOwnResult ? 'How did it go?' : 'Feedback:'}
           </Text>
           <IconButton
             icon={() => (
@@ -148,7 +148,7 @@ export function ResultFeedbackCard({
     <>
       <Card style={styles.card} mode="outlined">
         <Card.Title
-          title={isOwnResult ? '🎯 Self Assessment' : '🏋️ Coach Feedback'}
+          title={isOwnResult ? '🎯 Self Assessment' : '🏋️ Feedback'}
           titleVariant="titleSmall"
         />
         <Card.Content>
@@ -183,7 +183,7 @@ export function ResultFeedbackCard({
                 ? 'Change your rating:'
                 : isOwnResult
                 ? 'How did this workout go?'
-                : 'How did the athlete do?'}
+                : 'How did this workout go?'}
             </Text>
             <View style={styles.buttons}>
               <IconButton
@@ -330,8 +330,8 @@ function NotesDialog({
                 ? 'What went well in this workout?'
                 : 'What was challenging or could be improved?'
               : rating === 'thumbs_up'
-              ? 'What did the athlete do well?'
-              : 'What should the athlete focus on improving?'}
+              ? 'What went well in this workout?'
+              : 'What could be improved in this workout?'}
           </Text>
           <TextInput
             mode="outlined"

@@ -136,7 +136,7 @@ export function useCreateProgram() {
 
       // Match web app validation: entity_id is required
       if (!data.client_id) {
-        throw new Error("Please select a client or class");
+        throw new Error("Missing athlete");
       }
 
       // Get today's date in ISO format for start date

@@ -240,7 +240,7 @@ export default function AthleteOnboardingModal({
                 • Log your results immediately after each workout
               </Text>
               <Text variant="bodySmall" style={styles.tipText}>
-                • Request AI feedback for personalized coaching tips
+                • Request AI feedback for personalized guidance
               </Text>
               <Text variant="bodySmall" style={styles.tipText}>
                 • Track your PRs and progress over time
