@@ -30,7 +30,7 @@ type Result = {
   notes: string | null;
   created_at: string;
   workout: {
-    name: string;
+    title: string;
   } | null;
   displayValue: string;
 };
@@ -69,7 +69,7 @@ export default function HistoryScreen() {
         .select(`
           id, workout_id, result_type, time_seconds, rounds, reps,
           weight_kg, count, scale, is_pr, notes, created_at,
-          workout:program_workouts (name)
+          workout:program_workouts (title)
         `)
         .eq("user_id", user.id)
         .is("deleted_at", null)
@@ -155,7 +155,7 @@ export default function HistoryScreen() {
           <View style={styles.cardLeft}>
             <View style={styles.workoutNameRow}>
               <Text variant="titleMedium" style={styles.workoutName} numberOfLines={1}>
-                {item.workout?.name || "Workout"}
+                {item.workout?.title || "Workout"}
               </Text>
               {item.is_pr && <Text style={styles.prIcon}>🏆</Text>}
             </View>

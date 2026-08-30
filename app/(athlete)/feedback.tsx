@@ -13,7 +13,7 @@ type WorkoutResult = {
   result_type: string;
   created_at: string;
   workout: {
-    name: string;
+    title: string;
   } | null;
 };
 
@@ -33,7 +33,7 @@ export default function FeedbackScreen() {
           id,
           result_type,
           created_at,
-          workout:program_workouts (name)
+          workout:program_workouts (title)
         `)
         .eq("user_id", user.id)
         .is("deleted_at", null)
@@ -106,7 +106,7 @@ export default function FeedbackScreen() {
             {results.map((result) => (
               <View key={result.id} style={styles.feedbackItem}>
                 <Text variant="labelLarge" style={styles.workoutName}>
-                  {result.workout?.name || "Workout"}
+                  {result.workout?.title || "Workout"}
                 </Text>
                 <Text variant="bodySmall" style={styles.date}>
                   {new Date(result.created_at).toLocaleDateString()}
