@@ -1,5 +1,5 @@
 import { useState, useEffect, useContext, useCallback } from "react";
-import { View, StyleSheet, ScrollView, RefreshControl, Modal } from "react-native";
+import { View, StyleSheet, ScrollView, RefreshControl, Modal, Alert } from "react-native";
 import {
   Text,
   Surface,
@@ -24,11 +24,13 @@ import {
   Edit3,
   X,
   Sparkles,
+  Trash2,
 } from "lucide-react-native";
 import { supabase } from "@/lib/supabase/client";
 import { AuthContext } from "@/components/providers/AuthProvider";
 import { brandColors } from "@/app/_layout";
 import { useAthleteProfile } from "@/hooks/useAthleteProfile";
+import { apiClient } from "@/lib/api/client";
 
 type Tab = "prs" | "metrics";
 
@@ -68,6 +70,10 @@ export default function ProfileScreen() {
   const [refreshing, setRefreshing] = useState(false);
   const [activeTab, setActiveTab] = useState<Tab>("prs");
   const [editModalVisible, setEditModalVisible] = useState(false);
+  const [deleteModalVisible, setDeleteModalVisible] = useState(false);
+  const [deleteConfirmText, setDeleteConfirmText] = useState("");
+  const [deleteSubmitting, setDeleteSubmitting] = useState(false);
+  const [deleteError, setDeleteError] = useState<string | null>(null);
   const [editData, setEditData] = useState({
     display_name: "",
     squat_1rm: "",
@@ -196,6 +202,58 @@ export default function ProfileScreen() {
 
   const handleEditProfile = () => {
     setEditModalVisible(true);
+  };
+
+  const canDelete = deleteConfirmText.trim().toUpperCase() === "DELETE";
+
+  const openDeleteModal = () => {
+    setDeleteConfirmText("");
+    setDeleteError(null);
+    setDeleteModalVisible(true);
+  };
+
+  const handleDeleteAccount = async () => {
+    if (!canDelete || deleteSubmitting) return;
+    setDeleteSubmitting(true);
+    setDeleteError(null);
+    try {
+      // Try primary delete endpoint
+      try {
+        await apiClient.post("/api/delete-account");
+      } catch (primaryErr) {
+        // Try fallback deactivate endpoint
+        try {
+          await apiClient.post("/api/deactivate-account");
+        } catch (fallbackErr) {
+          // Try HTTP DELETE as a last resort
+          try {
+            await apiClient.delete("/api/delete-account");
+          } catch (finalErr) {
+            throw primaryErr;
+          }
+        }
+      }
+
+      setDeleteModalVisible(false);
+      Alert.alert("Account Deleted", "Your account has been deleted.", [
+        {
+          text: "OK",
+          onPress: async () => {
+            try {
+              await signOut();
+            } finally {
+              router.replace("/(auth)/login");
+            }
+          },
+        },
+      ]);
+    } catch (e: any) {
+      const message =
+        (e && e.message) || "We couldn't delete your account. Please try again.";
+      setDeleteError(message);
+    } finally {
+      setDeleteSubmitting(false);
+    }
   };
 
   const handleSaveProfile = async () => {
@@ -426,6 +484,26 @@ export default function ProfileScreen() {
           {/* Switch Gym removed - gym membership UI not available in B2C */}
         </View>
 
+        {/* Danger Zone - Delete Account */}
+        <Surface style={styles.dangerCard} elevation={1}>
+          <Text variant="titleMedium" style={styles.dangerTitle}>
+            Delete Account
+          </Text>
+          <Text variant="bodySmall" style={styles.dangerText}>
+            Permanently delete your account and data. This action cannot be undone.
+          </Text>
+          <Button
+            mode="contained"
+            onPress={openDeleteModal}
+            style={styles.deleteButton}
+            buttonColor="#d32f2f"
+            textColor="#fff"
+            icon={() => <Trash2 size={18} color="#fff" />}
+          >
+            Delete Account
+          </Button>
+        </Surface>
+
         <Button
           mode="outlined"
           onPress={handleSignOut}
@@ -547,6 +625,64 @@ export default function ProfileScreen() {
                 style={styles.modalSaveButton}
               >
                 Save Changes
+              </Button>
+            </View>
+          </SafeAreaView>
+        </Modal>
+        {/* Delete Account Modal */}
+        <Modal
+          visible={deleteModalVisible}
+          onDismiss={() => setDeleteModalVisible(false)}
+          animationType="slide"
+          presentationStyle="pageSheet"
+        >
+          <SafeAreaView style={styles.modalContainer}>
+            <View style={styles.modalHeader}>
+              <Text variant="titleLarge" style={styles.modalTitle}>
+                Delete Account
+              </Text>
+              <IconButton
+                icon={() => <X size={24} color="#666" />}
+                onPress={() => setDeleteModalVisible(false)}
+              />
+            </View>
+
+            <ScrollView style={styles.modalContent} showsVerticalScrollIndicator={false}>
+              <Text style={styles.dangerBody}>
+                This will permanently delete your account and associated data. This action
+                cannot be undone.
+              </Text>
+              <Text style={styles.confirmLabel}>Type DELETE to confirm:</Text>
+              <TextInput
+                mode="outlined"
+                placeholder="DELETE"
+                value={deleteConfirmText}
+                onChangeText={setDeleteConfirmText}
+                autoCapitalize="characters"
+                style={styles.deleteInput}
+              />
+              {!!deleteError && <Text style={styles.deleteError}>{deleteError}</Text>}
+            </ScrollView>
+
+            <View style={styles.modalFooter}>
+              <Button
+                mode="outlined"
+                onPress={() => setDeleteModalVisible(false)}
+                style={styles.modalCancelButton}
+                disabled={deleteSubmitting}
+              >
+                Cancel
+              </Button>
+              <Button
+                mode="contained"
+                onPress={handleDeleteAccount}
+                disabled={!canDelete || deleteSubmitting}
+                loading={deleteSubmitting}
+                buttonColor="#d32f2f"
+                textColor="#fff"
+                style={styles.modalSaveButton}
+              >
+                Delete
               </Button>
             </View>
           </SafeAreaView>
@@ -773,6 +909,27 @@ const styles = StyleSheet.create({
     borderRadius: 8,
     marginBottom: 4,
   },
+  dangerCard: {
+    borderRadius: 12,
+    backgroundColor: "#fff",
+    padding: 16,
+    marginTop: 8,
+    marginBottom: 8,
+    borderWidth: 1,
+    borderColor: "#fde0e0",
+  },
+  dangerTitle: {
+    fontWeight: "600",
+    color: "#b71c1c",
+    marginBottom: 6,
+  },
+  dangerText: {
+    color: "#6b6b6b",
+    marginBottom: 12,
+  },
+  deleteButton: {
+    alignSelf: "flex-start",
+  },
   signOutButton: {
     marginTop: 16,
     borderColor: "#d32f2f",
@@ -827,5 +984,20 @@ const styles = StyleSheet.create({
   },
   modalSaveButton: {
     flex: 2,
+  },
+  dangerBody: {
+    color: "#444",
+    marginBottom: 12,
+  },
+  confirmLabel: {
+    fontWeight: "600",
+    marginBottom: 8,
+  },
+  deleteInput: {
+    marginBottom: 12,
+  },
+  deleteError: {
+    color: "#b71c1c",
+    marginTop: 4,
   },
 });
