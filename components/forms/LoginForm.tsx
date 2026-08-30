@@ -35,7 +35,7 @@ export function LoginForm() {
     try {
       setIsLoading(true);
       await signIn(data.email, data.password);
-      router.replace("/(app)/dashboard");
+      router.replace("/");
     } catch (error: any) {
       Alert.alert("Error", error.message || "Failed to sign in");
     } finally {

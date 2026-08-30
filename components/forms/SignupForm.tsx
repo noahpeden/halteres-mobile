@@ -50,7 +50,7 @@ export function SignupForm() {
         [
           {
             text: "OK",
-            onPress: () => router.replace("/(app)/dashboard"),
+            onPress: () => router.replace("/"),
           },
         ],
       );
