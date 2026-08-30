@@ -2,6 +2,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/lib/supabase/client";
 import { apiClient } from "@/lib/api/client";
 import type { ProgramInput } from "@/lib/validations/program.schema";
+import { equipmentList } from "@/lib/constants/programConfig";
 
 // JSON field types for program data
 export type CalendarData = {
@@ -117,7 +118,7 @@ export function useCreateProgram() {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: async (data: ProgramInput) => {
+    mutationFn: async (data: ProgramInput | (ProgramInput & Record<string, any>)) => {
       console.log(
         "[useCreateProgram] Starting program creation with data:",
         data,
@@ -146,33 +147,58 @@ export function useCreateProgram() {
       endDate.setDate(endDate.getDate() + data.duration_weeks * 7 - 1);
       const endDateStr = endDate.toISOString().split("T")[0];
 
-      // Insert directly into Supabase (matching web app /api/CreateProgram logic)
-      const programData = {
+      // Derive calendar fields
+      const durationWeeks = data.duration_weeks;
+      const daysOfWeekNames: string[] =
+        (data as any).days_of_week_names && Array.isArray((data as any).days_of_week_names)
+          ? ((data as any).days_of_week_names as string[])
+          : ["Monday", "Wednesday", "Friday"];
+      const daysPerWeek = daysOfWeekNames.length;
+
+      // Translate equipment ids to names for storage (hard constraint)
+      const equipmentIds: number[] = Array.isArray((data as any).equipment)
+        ? ((data as any).equipment as number[])
+        : [];
+      const equipmentNames = equipmentIds
+        .map((id) => equipmentList.find((e) => e.value === id)?.label)
+        .filter((x): x is string => !!x);
+
+      const combinedReference: string | null = (() => {
+        const influences = ((data as any).program_influences as string) || "";
+        const recent = ((data as any).recent_training_history as string) || "";
+        const parts = [];
+        if (influences.trim()) parts.push(influences.trim());
+        if (recent.trim()) parts.push(`Recent Training:\n${recent.trim()}`);
+        return parts.length ? parts.join("\n\n---\n\n") : null;
+      })();
+
+      // Insert directly into Supabase
+      const programData: Record<string, unknown> = {
         name: data.name,
         entity_id: data.client_id,
-        duration_weeks: data.duration_weeks,
+        duration_weeks: durationWeeks,
         description: data.description || null,
-        training_methodology: null,
-        difficulty: "intermediate",
-        focus_area: null,
-        reference_input: null,
+        training_methodology: (data as any).training_methodology || null,
+        difficulty: (data as any).difficulty || null,
+        goal: (data as any).goal || null,
+        focus_area: (data as any).focus_area || null,
+        reference_input: combinedReference,
         calendar_data: {
           start_date: today,
           end_date: endDateStr,
-          days_of_week: ["Monday", "Wednesday", "Friday"],
+          duration_weeks: durationWeeks,
+          days_per_week: daysPerWeek,
+          days_of_week_names: daysOfWeekNames,
         },
         periodization: {
           program_type: "linear",
         },
         gym_details: {
-          gym_type: "crossfit_box",
-          equipment: [],
-        },
-        workout_format: {
-          formats: [],
+          gym_type: (data as any).gym_type || "Other",
+          equipment: equipmentNames,
         },
         session_details: {
-          duration_minutes: 60,
+          duration: (data as any).session_duration_minutes || 60,
         },
       };
 
@@ -206,7 +232,7 @@ export function useUpdateProgram(id: string) {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: async (data: Partial<ProgramInput>) => {
+    mutationFn: async (data: Record<string, unknown>) => {
       const { data: program, error } = await supabase
         .from("programs")
         .update(data)

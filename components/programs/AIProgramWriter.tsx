@@ -63,7 +63,7 @@ const defaultFormState: FormState = {
   programType: "linear",
   referenceInput: "",
   daysOfWeek: ["Monday", "Wednesday", "Friday"],
-  numberOfWeeks: 4,
+  numberOfWeeks: 8,
   startDate: "",
   endDate: "",
   gymType: "Crossfit Box",
@@ -348,6 +348,7 @@ export function AIProgramWriter({ programId }: AIProgramWriterProps) {
 
       // Note: start_date and end_date are stored in calendar_data, not as top-level columns
       const updateData = {
+        name: formState.name,
         description: formState.description,
         training_methodology: formState.trainingMethodology,
         reference_input: formState.referenceInput,
@@ -422,8 +423,8 @@ export function AIProgramWriter({ programId }: AIProgramWriterProps) {
       {
         label: "Number of Weeks",
         value: `${formState.numberOfWeeks} weeks`,
-        isValid: formState.numberOfWeeks >= 1 && formState.numberOfWeeks <= 8,
-        errorMessage: "Select 1-8 weeks",
+        isValid: formState.numberOfWeeks >= 1 && formState.numberOfWeeks <= 52,
+        errorMessage: "Select 1–52 weeks",
       },
       {
         label: "Start Date",
@@ -723,10 +724,12 @@ export function AIProgramWriter({ programId }: AIProgramWriterProps) {
 
         {/* Form Sections */}
         <ProgramEssentials
+          name={formState.name}
           trainingMethodology={formState.trainingMethodology}
           programType={formState.programType}
           description={formState.description}
           referenceInput={formState.referenceInput}
+          onNameChange={(v) => updateField("name", v)}
           onTrainingMethodologyChange={(v) =>
             updateField("trainingMethodology", v)
           }
@@ -751,12 +754,14 @@ export function AIProgramWriter({ programId }: AIProgramWriterProps) {
         <ProgramDetailsSection
           gymType={formState.gymType}
           difficulty={formState.difficulty}
+          goal={formState.goal}
           selectedEquipment={formState.equipment}
           focusArea={formState.focusArea}
           sessionDuration={formState.sessionDuration}
           selectedFormats={formState.workoutFormats}
           onGymTypeChange={(v) => updateField("gymType", v)}
           onDifficultyChange={(v) => updateField("difficulty", v)}
+          onGoalChange={(v) => updateField("goal", v)}
           onEquipmentChange={(v) => updateField("equipment", v)}
           onFocusAreaChange={(v) => updateField("focusArea", v)}
           onDurationChange={(v) => updateField("sessionDuration", v)}

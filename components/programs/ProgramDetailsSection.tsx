@@ -21,6 +21,7 @@ import {
   gymTypes,
   workoutFormats,
 } from "@/lib/constants/programConfig";
+import { goals } from "@/lib/constants/programConfig";
 
 const durationOptions = [
   { value: 30, label: "30 minutes" },
@@ -33,12 +34,14 @@ const durationOptions = [
 type ProgramDetailsSectionProps = {
   gymType: string;
   difficulty: string;
+  goal: string;
   selectedEquipment: number[];
   focusArea: string;
   sessionDuration: number;
   selectedFormats: string[];
   onGymTypeChange: (type: string) => void;
   onDifficultyChange: (difficulty: string) => void;
+  onGoalChange: (goal: string) => void;
   onEquipmentChange: (equipment: number[]) => void;
   onFocusAreaChange: (area: string) => void;
   onDurationChange: (duration: number) => void;
@@ -49,12 +52,14 @@ type ProgramDetailsSectionProps = {
 export function ProgramDetailsSection({
   gymType,
   difficulty,
+  goal,
   selectedEquipment,
   focusArea,
   sessionDuration,
   selectedFormats,
   onGymTypeChange,
   onDifficultyChange,
+  onGoalChange,
   onEquipmentChange,
   onFocusAreaChange,
   onDurationChange,
@@ -64,6 +69,7 @@ export function ProgramDetailsSection({
   const theme = useTheme();
   const [gymTypeMenuVisible, setGymTypeMenuVisible] = useState(false);
   const [difficultyMenuVisible, setDifficultyMenuVisible] = useState(false);
+  const [goalMenuVisible, setGoalMenuVisible] = useState(false);
   const [focusAreaMenuVisible, setFocusAreaMenuVisible] = useState(false);
   const [durationMenuVisible, setDurationMenuVisible] = useState(false);
   const [equipmentModalVisible, setEquipmentModalVisible] = useState(false);
@@ -209,6 +215,44 @@ export function ProgramDetailsSection({
                 titleStyle={
                   difficulty === diff.value ? { fontWeight: "bold" } : undefined
                 }
+              />
+            ))}
+          </Menu>
+        </View>
+
+        {/* Goal */}
+        <View style={styles.fieldContainer}>
+          <Text variant="labelLarge" style={styles.label}>
+            Goal
+          </Text>
+          <Menu
+            visible={goalMenuVisible}
+            onDismiss={() => setGoalMenuVisible(false)}
+            anchor={
+              <TouchableRipple
+                onPress={() => setGoalMenuVisible(true)}
+                style={[styles.dropdown, { borderColor: theme.colors.outline }]}
+              >
+                <View style={styles.dropdownContent}>
+                  <Text>
+                    {goals.find((g) => g.value === goal)?.label || "Select goal"}
+                  </Text>
+                  <Text>▼</Text>
+                </View>
+              </TouchableRipple>
+            }
+            contentStyle={styles.menuContent}
+          >
+            {goals.map((g) => (
+              <Menu.Item
+                key={g.value}
+                onPress={() => {
+                  onGoalChange(g.value);
+                  setGoalMenuVisible(false);
+                  onFieldBlur("goal");
+                }}
+                title={g.label}
+                titleStyle={goal === g.value ? { fontWeight: "bold" } : undefined}
               />
             ))}
           </Menu>
