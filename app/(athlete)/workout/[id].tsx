@@ -59,7 +59,7 @@ type UserResult = {
 export default function WorkoutDetailScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const router = useRouter();
-  const { user } = useContext(AuthContext);
+  const { dbUserId } = useContext(AuthContext);
 
   const [workout, setWorkout] = useState<Workout | null>(null);
   const [userResult, setUserResult] = useState<UserResult | null>(null);
@@ -77,7 +77,7 @@ export default function WorkoutDetailScreen() {
   const tvDisplay = useTVDisplay(sections);
 
   const fetchWorkoutData = useCallback(async () => {
-    if (!id || !user?.id) return;
+    if (!id || !dbUserId) return;
 
     try {
       // Fetch workout details
@@ -98,7 +98,7 @@ export default function WorkoutDetailScreen() {
         .from("workout_results")
         .select("*")
         .eq("workout_id", id)
-        .eq("user_id", user.id)
+        .eq("user_id", dbUserId)
         .is("deleted_at", null)
         .order("created_at", { ascending: false })
         .limit(1)
@@ -116,7 +116,7 @@ export default function WorkoutDetailScreen() {
       setLoading(false);
       setRefreshing(false);
     }
-  }, [id, user?.id]);
+  }, [id, dbUserId]);
 
   useEffect(() => {
     fetchWorkoutData();
@@ -353,12 +353,12 @@ export default function WorkoutDetailScreen() {
           )}
 
           {/* Self-Assessment Feedback */}
-          {userResult && user?.id && (
+          {userResult && dbUserId && (
             <View style={styles.feedbackContainer}>
               <ResultFeedbackCard
                 workoutResultId={userResult.id}
-                resultOwnerId={user.id}
-                currentUserId={user.id}
+                resultOwnerId={dbUserId}
+                currentUserId={dbUserId}
               />
             </View>
           )}

@@ -36,7 +36,7 @@ type RecentResult = {
 
 export default function AthleteHomeScreen() {
   const router = useRouter();
-  const { user, profile, refetchProfile } = useContext(AuthContext);
+  const { dbUserId, profile, refetchProfile } = useContext(AuthContext);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [todaysWorkouts, setTodaysWorkouts] = useState<Workout[]>([]);
@@ -64,7 +64,7 @@ export default function AthleteHomeScreen() {
   };
 
   const fetchData = useCallback(async () => {
-    if (!user?.id) {
+    if (!dbUserId) {
       setLoading(false);
       return;
     }
@@ -78,7 +78,7 @@ export default function AthleteHomeScreen() {
       const { data: entities } = await supabase
         .from("entities")
         .select("id")
-        .eq("user_id", user.id)
+        .eq("user_id", dbUserId)
         .is("deleted_at", null);
       const entityIds = (entities || []).map((e) => e.id);
 
@@ -130,7 +130,7 @@ export default function AthleteHomeScreen() {
       const { data: userResults } = await supabase
         .from("workout_results")
         .select("workout_id")
-        .eq("user_id", user.id)
+        .eq("user_id", dbUserId)
         .in("workout_id", workoutIds)
         .is("deleted_at", null);
 
@@ -150,7 +150,7 @@ export default function AthleteHomeScreen() {
           weight_kg, count, scale, is_pr, created_at,
           workout:program_workouts (title)
         `)
-        .eq("user_id", user.id)
+        .eq("user_id", dbUserId)
         .is("deleted_at", null)
         .order("created_at", { ascending: false })
         .limit(5);
@@ -171,14 +171,14 @@ export default function AthleteHomeScreen() {
       const { count: workoutsThisWeek } = await supabase
         .from("workout_results")
         .select("*", { count: "exact", head: true })
-        .eq("user_id", user.id)
+        .eq("user_id", dbUserId)
         .gte("created_at", weekAgo.toISOString())
         .is("deleted_at", null);
 
       const { count: prsThisMonth } = await supabase
         .from("personal_records")
         .select("*", { count: "exact", head: true })
-        .eq("user_id", user.id)
+        .eq("user_id", dbUserId)
         .gte("achieved_at", monthAgo.toISOString());
 
       setStats({
@@ -192,7 +192,7 @@ export default function AthleteHomeScreen() {
       setLoading(false);
       setRefreshing(false);
     }
-  }, [user?.id]);
+  }, [dbUserId]);
 
   useEffect(() => {
     fetchData();

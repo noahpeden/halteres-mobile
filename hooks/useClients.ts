@@ -70,11 +70,11 @@ export type ClientUpdateInput = {
 
 // Match web app: query entities directly from Supabase
 export function useClients() {
-  const { user } = useAuth();
+  const { dbUserId } = useAuth();
   return useQuery<Client[]>({
     queryKey: ["clients"],
     queryFn: async () => {
-      if (!user?.id) {
+      if (!dbUserId) {
         throw new Error("Not authenticated");
       }
 
@@ -82,7 +82,7 @@ export function useClients() {
       const { data, error } = await supabase
         .from("entities")
         .select("*")
-        .eq("user_id", user.id)
+        .eq("user_id", dbUserId)
         .is("deleted_at", null)
         .order("created_at", { ascending: false });
 
@@ -114,11 +114,11 @@ export function useClient(id: string) {
 // Match web app: insert directly into Supabase entities table with metrics
 export function useCreateClient() {
   const queryClient = useQueryClient();
-  const { user } = useAuth();
+  const { dbUserId } = useAuth();
 
   return useMutation({
     mutationFn: async (data: ClientUpdateInput): Promise<Client> => {
-      if (!user?.id) {
+      if (!dbUserId) {
         throw new Error("Not authenticated");
       }
 
@@ -126,7 +126,7 @@ export function useCreateClient() {
       const insertData: Record<string, unknown> = {
         name: data.name,
         type: data.type || "CLIENT",
-        user_id: user.id,
+        user_id: dbUserId,
       };
 
       // Add metrics if provided and type is CLIENT
@@ -174,7 +174,7 @@ export function useCreateClient() {
 
 export function useUpdateClient() {
   const queryClient = useQueryClient();
-  const { user } = useAuth();
+  const { dbUserId } = useAuth();
 
   return useMutation({
     mutationFn: async ({
@@ -184,7 +184,7 @@ export function useUpdateClient() {
       id: string;
       data: ClientUpdateInput;
     }): Promise<Client> => {
-      if (!user?.id) {
+      if (!dbUserId) {
         throw new Error("Not authenticated");
       }
 
@@ -226,7 +226,7 @@ export function useUpdateClient() {
         .from("entities")
         .update(updateData)
         .eq("id", id)
-        .eq("user_id", user.id) // Ensure owner is updating
+        .eq("user_id", dbUserId) // Ensure owner is updating
         .select()
         .single();
 

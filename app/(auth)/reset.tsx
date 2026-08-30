@@ -23,7 +23,11 @@ type ResetInput = z.infer<typeof resetSchema>;
 
 export default function ResetPasswordScreen() {
   const [isLoading, setIsLoading] = useState(false);
-  const { signIn } = useSignIn();
+  const [step, setStep] = useState<"request" | "reset">("request");
+  const [code, setCode] = useState("");
+  const [newPassword, setNewPassword] = useState("");
+  const [confirmPassword, setConfirmPassword] = useState("");
+  const { signIn, setActive } = useSignIn();
 
   const {
     control,
@@ -45,22 +49,55 @@ export default function ResetPasswordScreen() {
         strategy: "reset_password_email_code",
         identifier: data.email,
       });
-
-      Alert.alert(
-        "Check your email",
-        "We sent you a link to reset your password.",
-        [
-          {
-            text: "OK",
-            onPress: () => router.replace("/(auth)/login"),
-          },
-        ],
-      );
+      setStep("reset");
     } catch (error) {
       const errorMessage =
         error instanceof Error
           ? error.message
           : "Failed to send password reset email";
+      Alert.alert("Error", errorMessage);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const onReset = async () => {
+    try {
+      if (newPassword !== confirmPassword) {
+        Alert.alert("Error", "Passwords do not match");
+        return;
+      }
+      setIsLoading(true);
+      if (!signIn) throw new Error("Auth not ready");
+      const first = await signIn.attemptFirstFactor({
+        strategy: "reset_password_email_code",
+        code,
+      });
+      // Depending on Clerk, we may need to set the new password next
+      // @ts-ignore
+      if (first.status === "needs_new_password") {
+        // @ts-ignore
+        const res = await signIn.resetPassword({ password: newPassword });
+        // @ts-ignore
+        if (res.status === "complete") {
+          // @ts-ignore
+          await setActive!({ session: res.createdSessionId });
+          router.replace("/");
+          return;
+        }
+      }
+      // Some versions may return complete directly
+      // @ts-ignore
+      if (first.status === "complete") {
+        // @ts-ignore
+        await setActive!({ session: first.createdSessionId });
+        router.replace("/");
+        return;
+      }
+      Alert.alert("Error", "Could not reset password. Please try again.");
+    } catch (error) {
+      const errorMessage =
+        error instanceof Error ? error.message : "Failed to reset password";
       Alert.alert("Error", errorMessage);
     } finally {
       setIsLoading(false);
@@ -112,16 +149,57 @@ export default function ResetPasswordScreen() {
               )}
             />
 
-            <Button
-              mode="contained"
-              onPress={handleSubmit(onSubmit)}
-              loading={isLoading}
-              disabled={isLoading}
-              style={styles.button}
-              contentStyle={styles.buttonContent}
-            >
-              Send reset link
-            </Button>
+            {step === "request" ? (
+              <Button
+                mode="contained"
+                onPress={handleSubmit(onSubmit)}
+                loading={isLoading}
+                disabled={isLoading}
+                style={styles.button}
+                contentStyle={styles.buttonContent}
+              >
+                Send reset code
+              </Button>
+            ) : (
+              <>
+                <TextInput
+                  label="Email code"
+                  value={code}
+                  onChangeText={setCode}
+                  mode="outlined"
+                  style={styles.input}
+                  keyboardType="number-pad"
+                />
+                <TextInput
+                  label="New password"
+                  value={newPassword}
+                  onChangeText={setNewPassword}
+                  mode="outlined"
+                  style={styles.input}
+                  secureTextEntry
+                  autoCapitalize="none"
+                />
+                <TextInput
+                  label="Confirm new password"
+                  value={confirmPassword}
+                  onChangeText={setConfirmPassword}
+                  mode="outlined"
+                  style={styles.input}
+                  secureTextEntry
+                  autoCapitalize="none"
+                />
+                <Button
+                  mode="contained"
+                  onPress={onReset}
+                  loading={isLoading}
+                  disabled={isLoading}
+                  style={styles.button}
+                  contentStyle={styles.buttonContent}
+                >
+                  Reset password
+                </Button>
+              </>
+            )}
           </View>
         </ScrollView>
       </KeyboardAvoidingView>

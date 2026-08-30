@@ -39,7 +39,7 @@ export default function ResultEntryForm({
   onCancel,
   defaultResultType = "time",
 }: Props) {
-  const { user } = useAuth();
+  const { dbUserId } = useAuth();
   const [resultType, setResultType] = useState<ResultType>(defaultResultType);
   const [scale, setScale] = useState<Scale>("rx");
   const [loading, setLoading] = useState(false);
@@ -61,10 +61,10 @@ export default function ResultEntryForm({
     setError(null);
 
     try {
-      if (!user?.id) throw new Error("Not authenticated");
+      if (!dbUserId) throw new Error("Not authenticated");
 
       const resultData: any = {
-        user_id: user.id,
+        user_id: dbUserId,
         workout_id: workoutId,
         gym_id: gymId || null,
         result_type: resultType,
@@ -121,7 +121,7 @@ export default function ResultEntryForm({
       const { data: previousResults } = await supabase
         .from("workout_results")
         .select("*")
-        .eq("user_id", user.id)
+        .eq("user_id", dbUserId)
         .eq("workout_id", workoutId)
         .eq("scale", scale)
         .neq("id", result.id)

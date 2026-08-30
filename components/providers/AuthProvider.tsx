@@ -54,6 +54,7 @@ type AppUser = {
 
 type AuthContextType = {
   user: AppUser | null;
+  dbUserId: string | null;
   isLoading: boolean;
   signIn: (email: string, password: string) => Promise<void>;
   signUp: (email: string, password: string, role?: UserRole) => Promise<void>;
@@ -71,6 +72,7 @@ type AuthContextType = {
 
 export const AuthContext = createContext<AuthContextType>({
   user: null,
+  dbUserId: null,
   isLoading: true,
   signIn: async () => {},
   signUp: async () => {},
@@ -90,6 +92,7 @@ export function AuthProvider({ children }: PropsWithChildren) {
   const { signUp, setActive: setActiveSignUp } = useSignUp();
 
   const [user, setUser] = useState<AppUser | null>(null);
+  const [dbUserId, setDbUserId] = useState<string | null>(null);
   const isLoading = !authLoaded || !userLoaded;
   const [profile, setProfile] = useState<Profile | null>(null);
   const [loadingProfile, setLoadingProfile] = useState(true);
@@ -103,45 +106,54 @@ export function AuthProvider({ children }: PropsWithChildren) {
     }
     setLoadingProfile(true);
     try {
-      // Try by id first
-      let { data, error } = await supabase
-        .from("profiles")
-        .select(
-          `subscription_status, trial_end_date, generations_remaining, last_generation_date,
-           role, display_name, full_name, profile_photo_url, notification_preferences,
-           onboarding_completed, bench_1rm, squat_1rm, deadlift_1rm, weight_kg, height_cm, mile_time,
-           gender, recovery_score, injury_history, email`
-        )
-        .eq("id", userId)
-        .maybeSingle();
-
-      if (!data && email) {
-        // Fallback by email for legacy Supabase users
+      // Prefer email match to preserve UUID PK mapping
+      let data: any = null;
+      let error: any = null;
+      if (email) {
         const byEmail = await supabase
           .from("profiles")
           .select(
-            `subscription_status, trial_end_date, generations_remaining, last_generation_date,
+            `id, email, subscription_status, trial_end_date, generations_remaining, last_generation_date,
              role, display_name, full_name, profile_photo_url, notification_preferences,
              onboarding_completed, bench_1rm, squat_1rm, deadlift_1rm, weight_kg, height_cm, mile_time,
-             gender, recovery_score, injury_history, email, id`
+             gender, recovery_score, injury_history`
           )
           .eq("email", email)
           .maybeSingle();
         data = byEmail.data as any;
         error = byEmail.error as any;
       }
+      // Fallback by id (for rare pre-mapped cases)
+      if (!data && userId) {
+        const byId = await supabase
+          .from("profiles")
+          .select(
+            `id, email, subscription_status, trial_end_date, generations_remaining, last_generation_date,
+             role, display_name, full_name, profile_photo_url, notification_preferences,
+             onboarding_completed, bench_1rm, squat_1rm, deadlift_1rm, weight_kg, height_cm, mile_time,
+             gender, recovery_score, injury_history`
+          )
+          .eq("id", userId)
+          .maybeSingle();
+        data = byId.data as any;
+        error = byId.error as any;
+      }
 
       if (error) {
         console.error("Error fetching profile:", error);
         setProfile(null);
+        setDbUserId(null);
       } else if (data) {
         setProfile(data as Profile);
+        setDbUserId(data.id as string);
       } else {
         setProfile(null);
+        setDbUserId(null);
       }
     } catch (error) {
       console.error("Unexpected error fetching profile:", error);
       setProfile(null);
+      setDbUserId(null);
     } finally {
       setLoadingProfile(false);
     }
@@ -152,6 +164,7 @@ export function AuthProvider({ children }: PropsWithChildren) {
     if (!clerkUser) {
       setUser(null);
       setProfile(null);
+      setDbUserId(null);
       setLoadingProfile(false);
       return;
     }
@@ -170,10 +183,19 @@ export function AuthProvider({ children }: PropsWithChildren) {
       if (profile) return;
       // Create minimal active profile to match web behavior
       try {
+        // Generate a UUID for the DB primary key (must remain UUID)
+        let newId: string;
+        try {
+          const Crypto = await import("expo-crypto");
+          // @ts-ignore
+          newId = (Crypto.randomUUID && Crypto.randomUUID()) || Math.random().toString(36).slice(2) + Date.now().toString(36);
+        } catch {
+          newId = Math.random().toString(36).slice(2) + Date.now().toString(36);
+        }
         const now = new Date();
         const trialEnd = new Date(now.getTime() + 7 * 24 * 60 * 60 * 1000);
         const profileData = {
-          id: user.id,
+          id: newId,
           email: user.email,
           role: "athlete" as UserRole,
           subscription_status: "trialing",
@@ -218,14 +240,13 @@ export function AuthProvider({ children }: PropsWithChildren) {
     role: UserRole = "athlete"
   ) => {
     if (!signUp) throw new Error("Auth not ready");
-    // Create Clerk user; email verification is handled by Clerk
+    // Create Clerk user and send email code
     await signUp.create({
       emailAddress: email,
       password,
     });
-    // Don't set active session here; prompt user to verify email like current UX
-    // Create fallback profile immediately with Clerk user id once available
-    // We can optimistically try to fetch Clerk user via useUser on next load
+    // Prepare email code verification
+    await signUp.prepareEmailAddressVerification({ strategy: "email_code" });
   };
 
   const signOut = async () => {
@@ -240,6 +261,7 @@ export function AuthProvider({ children }: PropsWithChildren) {
   const contextValue = useMemo(
     () => ({
       user,
+      dbUserId,
       isLoading,
       signIn,
       signUp,
@@ -265,7 +287,7 @@ export function AuthProvider({ children }: PropsWithChildren) {
         injury_history: profile?.injury_history ?? null,
       },
     }),
-    [user, isLoading, profile, loadingProfile, fetchProfile, isAthlete]
+    [user, dbUserId, isLoading, profile, loadingProfile, fetchProfile, isAthlete]
   );
 
   return (

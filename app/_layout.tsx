@@ -6,10 +6,10 @@ import { AuthProvider } from "@/components/providers/AuthProvider";
 import { QueryProvider } from "@/components/providers/QueryProvider";
 import { ClerkProvider } from "@clerk/expo";
 import * as SecureStore from "expo-secure-store";
-import { useEffect } from "react";
-import { useAuth as useClerkAuth } from "@clerk/expo";
 import { setAuthTokenProvider } from "@/lib/auth/token";
 import { setSupabaseAuthTokenProvider } from "@/lib/supabase/client";
+import { useAuth as useClerkAuth } from "@clerk/expo";
+import { useEffect } from "react";
 
 // Brand colors from web app (halteres.ai)
 export const brandColors = {
@@ -122,6 +122,26 @@ const theme = {
   },
 };
 
+function ClerkBridges() {
+  const { getToken, isSignedIn } = useClerkAuth();
+  useEffect(() => {
+    // Provide tokens to Supabase and API client
+    const provider = async () => {
+      try {
+        // Prefer native session JWT (matches web); fallback to 'supabase' template
+        const token = await getToken();
+        if (token) return token;
+        return await getToken({ template: "supabase" } as any);
+      } catch {
+        return null;
+      }
+    };
+    setSupabaseAuthTokenProvider(provider);
+    setAuthTokenProvider(provider);
+  }, [getToken, isSignedIn]);
+  return null;
+}
+
 export default function RootLayout() {
   const publishableKey = process.env.EXPO_PUBLIC_CLERK_PUBLISHABLE_KEY!;
   const tokenCache = {
@@ -132,23 +152,6 @@ export default function RootLayout() {
       return SecureStore.setItemAsync(key, value);
     },
   };
-
-  function ClerkBridges() {
-    const { getToken, isSignedIn } = useClerkAuth();
-    useEffect(() => {
-      // Provide tokens to Supabase and API client
-      const provider = async () => {
-        try {
-          return await getToken({ template: "supabase" });
-        } catch {
-          return null;
-        }
-      };
-      setSupabaseAuthTokenProvider(provider);
-      setAuthTokenProvider(provider);
-    }, [getToken, isSignedIn]);
-    return null;
-  }
 
   return (
     <GestureHandlerRootView style={{ flex: 1 }}>

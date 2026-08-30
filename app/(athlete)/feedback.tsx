@@ -18,13 +18,13 @@ type WorkoutResult = {
 };
 
 export default function FeedbackScreen() {
-  const { user } = useContext(AuthContext);
+  const { dbUserId } = useContext(AuthContext);
   const [results, setResults] = useState<WorkoutResult[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
 
   const fetchResults = async () => {
-    if (!user?.id) return;
+    if (!dbUserId) return;
 
     try {
       const { data, error } = await supabase
@@ -35,7 +35,7 @@ export default function FeedbackScreen() {
           created_at,
           workout:program_workouts (title)
         `)
-        .eq("user_id", user.id)
+        .eq("user_id", dbUserId)
         .is("deleted_at", null)
         .order("created_at", { ascending: false })
         .limit(10);
@@ -52,7 +52,7 @@ export default function FeedbackScreen() {
 
   useEffect(() => {
     fetchResults();
-  }, [user?.id]);
+  }, [dbUserId]);
 
   const onRefresh = () => {
     setRefreshing(true);

@@ -55,11 +55,11 @@ export type Program = {
 };
 
 export function usePrograms() {
-  const { user } = useAuth();
+  const { dbUserId } = useAuth();
   return useQuery<Program[]>({
     queryKey: ["programs"],
     queryFn: async () => {
-      if (!user?.id) {
+      if (!dbUserId) {
         throw new Error("Not authenticated");
       }
 
@@ -67,7 +67,7 @@ export function usePrograms() {
       const { data: entities, error: entitiesError } = await supabase
         .from("entities")
         .select("id")
-        .eq("user_id", user.id)
+        .eq("user_id", dbUserId)
         .is("deleted_at", null);
 
       if (entitiesError) throw entitiesError;
@@ -114,7 +114,7 @@ export function useProgram(id: string) {
 
 export function useCreateProgram() {
   const queryClient = useQueryClient();
-  const { user } = useAuth();
+  const { dbUserId } = useAuth();
 
   return useMutation({
     mutationFn: async (data: ProgramInput | (ProgramInput & Record<string, any>)) => {
@@ -123,9 +123,9 @@ export function useCreateProgram() {
         data,
       );
 
-      console.log("[useCreateProgram] User:", user?.id);
+      console.log("[useCreateProgram] DB User:", dbUserId);
 
-      if (!user?.id) {
+      if (!dbUserId) {
         throw new Error("Not authenticated");
       }
 
