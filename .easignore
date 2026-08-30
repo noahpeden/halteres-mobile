@@ -1,0 +1,9 @@
+# Prevent stale native projects from being uploaded to EAS Build
+android/
+ios/
+
+# Dependencies (EAS installs these from package.json)
+node_modules/
+
+# Environment variables
+.env*
