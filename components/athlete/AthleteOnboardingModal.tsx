@@ -78,7 +78,7 @@ export default function AthleteOnboardingModal({
           <View style={styles.stepContent}>
             <Text style={styles.welcomeEmoji}>🏋️</Text>
             <Text variant="headlineMedium" style={styles.welcomeTitle}>
-              Welcome to {gymName || "your gym"}!
+              Welcome to HalteresAI!
             </Text>
             <Text variant="bodyMedium" style={styles.welcomeText}>
               Let's get you set up so you can start tracking your workouts and crushing goals.
@@ -91,7 +91,7 @@ export default function AthleteOnboardingModal({
               <View style={styles.featureRow}>
                 <Check size={18} color={brandColors.thrivingGreen.DEFAULT} />
                 <Text variant="bodyMedium" style={styles.featureText}>
-                  View today's workouts from your coach
+                  View today's personalized workouts
                 </Text>
               </View>
               <View style={styles.featureRow}>
@@ -106,12 +106,6 @@ export default function AthleteOnboardingModal({
                   Get AI-powered feedback on performance
                 </Text>
               </View>
-              <View style={styles.featureRow}>
-                <Check size={18} color={brandColors.thrivingGreen.DEFAULT} />
-                <Text variant="bodyMedium" style={styles.featureText}>
-                  Compete on leaderboards with your gym
-                </Text>
-              </View>
             </Surface>
           </View>
         );
@@ -123,7 +117,7 @@ export default function AthleteOnboardingModal({
               Set Up Your Profile
             </Text>
             <Text variant="bodyMedium" style={styles.stepSubtitle}>
-              How would you like to be known in the gym?
+              Choose a display name for your training
             </Text>
 
             <TextInput
@@ -134,7 +128,7 @@ export default function AthleteOnboardingModal({
               style={styles.input}
             />
             <Text variant="bodySmall" style={styles.inputHint}>
-              This is what others will see on the leaderboard
+              This is how your name appears in the app
             </Text>
           </View>
         );
@@ -249,7 +243,7 @@ export default function AthleteOnboardingModal({
                 • Request AI feedback for personalized coaching tips
               </Text>
               <Text variant="bodySmall" style={styles.tipText}>
-                • Check the leaderboard to see how you stack up!
+                • Track your PRs and progress over time
               </Text>
             </Surface>
           </View>

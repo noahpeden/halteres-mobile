@@ -45,8 +45,8 @@ export default function LoginScreen() {
                   ]}
                 >
                   {activeTab === "login"
-                    ? "Access workouts, leaderboards, and AI feedback"
-                    : "Track workouts, compete, and get personalized insights"}
+                    ? "Access workouts and AI feedback"
+                    : "Track workouts and get personalized insights"}
                 </Text>
               </View>
 
