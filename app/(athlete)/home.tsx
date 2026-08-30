@@ -12,9 +12,9 @@ import AthleteOnboardingModal from "@/components/athlete/AthleteOnboardingModal"
 
 type Workout = {
   id: string;
-  name: string;
+  title: string;
   workout_type: string;
-  description: string | null;
+  body: string | null;
   hasLogged: boolean;
 };
 
@@ -117,7 +117,7 @@ export default function AthleteHomeScreen() {
       if (activeProgramId) {
         const { data: todays } = await supabase
           .from("program_workouts")
-          .select("id, name, workout_type, description, scheduled_date")
+          .select("id, title, workout_type, body, scheduled_date")
           .eq("program_id", activeProgramId)
           .gte("scheduled_date", startOfDay)
           .lte("scheduled_date", endOfDay)
@@ -148,7 +148,7 @@ export default function AthleteHomeScreen() {
         .select(`
           id, workout_id, result_type, time_seconds, rounds, reps,
           weight_kg, count, scale, is_pr, created_at,
-          workout:program_workouts (name)
+          workout:program_workouts (title)
         `)
         .eq("user_id", user.id)
         .is("deleted_at", null)
@@ -312,7 +312,7 @@ export default function AthleteHomeScreen() {
                     <View style={styles.workoutRow}>
                       <View style={styles.workoutInfo}>
                         <Text variant="titleMedium" style={styles.workoutName}>
-                          {workout.name}
+                        {workout.title}
                         </Text>
                         <Text variant="bodySmall" style={styles.workoutType}>
                           {workout.workout_type}
@@ -328,13 +328,13 @@ export default function AthleteHomeScreen() {
                         </Button>
                       )}
                     </View>
-                    {workout.description && (
+                  {workout.body && (
                       <Text
                         variant="bodySmall"
                         style={styles.workoutDescription}
                         numberOfLines={2}
                       >
-                        {workout.description}
+                      {workout.body}
                       </Text>
                     )}
                   </Card.Content>
@@ -380,7 +380,7 @@ export default function AthleteHomeScreen() {
                   >
                     <View style={styles.activityInfo}>
                       <Text variant="bodyMedium" style={styles.activityName}>
-                        {result.workout?.name || "Workout"}
+                        {result.workout?.title || "Workout"}
                         {result.is_pr && " 🏆"}
                       </Text>
                       <Text variant="bodySmall" style={styles.activityDate}>
