@@ -1,11 +1,9 @@
 import { useRouter } from "expo-router";
-import { AlertTriangle } from "lucide-react-native";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import type { TwoPhaseWorkout } from "@/lib/types/twoPhaseGeneration";
 import { Alert, ScrollView, StyleSheet, View } from "react-native";
 import {
   ActivityIndicator,
-  Banner,
   Button,
   Divider,
   FAB,
@@ -13,7 +11,6 @@ import {
   Text,
   useTheme,
 } from "react-native-paper";
-import { useAuth } from "@/hooks/useAuth";
 import { useProgramDataMobile } from "@/hooks/useProgramDataMobile";
 import { useProgramWorkoutsMobile } from "@/hooks/useProgramWorkoutsMobile";
 import { useTwoPhaseGeneration } from "@/hooks/useTwoPhaseGeneration";
@@ -79,7 +76,6 @@ const defaultFormState: FormState = {
 export function AIProgramWriter({ programId }: AIProgramWriterProps) {
   const theme = useTheme();
   const router = useRouter();
-  const { profile } = useAuth();
 
   // Data hooks
   const {
@@ -114,62 +110,8 @@ export function AIProgramWriter({ programId }: AIProgramWriterProps) {
     cancel: cancelGeneration,
   } = useTwoPhaseGeneration(programId);
 
-  // Subscription eligibility check
-  const { isEligibleToGenerate, disabledReason } = useMemo(() => {
-    const subscriptionStatus = profile?.subscription_status;
-    const trialEndDate = profile?.trial_end_date;
-    const generationsRemaining = profile?.generations_remaining;
-
-    const isActive = subscriptionStatus === "active";
-    const isTrialing = subscriptionStatus === "trialing";
-    const now = new Date();
-
-    // Active subscribers can always generate
-    if (isActive) {
-      return { isEligibleToGenerate: true, disabledReason: null };
-    }
-
-    // Trial user checks
-    if (isTrialing) {
-      // Check 1: Trial Validity
-      const trialEnd = trialEndDate ? new Date(trialEndDate) : null;
-      const isTrialValid =
-        trialEnd instanceof Date &&
-        !Number.isNaN(trialEnd.getTime()) &&
-        new Date(trialEnd.toDateString()) >= new Date(now.toDateString());
-
-      if (!isTrialValid) {
-        return {
-          isEligibleToGenerate: false,
-          disabledReason:
-            "Your trial period has expired. Please upgrade to continue generating programs.",
-        };
-      }
-
-      // Check 2: Trial Generations Remaining
-      const remaining = generationsRemaining ?? 0;
-      if (remaining <= 0) {
-        return {
-          isEligibleToGenerate: false,
-          disabledReason:
-            "You have used all your trial generations. Please upgrade to continue generating programs.",
-        };
-      }
-
-      // All trial checks pass
-      return { isEligibleToGenerate: true, disabledReason: null };
-    }
-
-    // Default: Not active and not on trial
-    return {
-      isEligibleToGenerate: false,
-      disabledReason: "Please start a trial or subscribe to generate programs.",
-    };
-  }, [
-    profile?.subscription_status,
-    profile?.trial_end_date,
-    profile?.generations_remaining,
-  ]);
+  // Self-coached: generation always available (no payments/subscription gating)
+  const isEligibleToGenerate = true;
 
   // State for showing skeleton preview vs workout list
   const [showSkeletonPreview, setShowSkeletonPreview] = useState(false);
@@ -827,23 +769,6 @@ export function AIProgramWriter({ programId }: AIProgramWriterProps) {
         </View>
       </ScrollView>
 
-      {/* Subscription Warning Banner */}
-      {!isEligibleToGenerate && disabledReason && (
-        <Banner
-          visible
-          icon={() => <AlertTriangle size={24} color={theme.colors.error} />}
-          actions={[
-            {
-              label: "Upgrade",
-              onPress: () => router.push("/(athlete)/profile"),
-            },
-          ]}
-          style={styles.subscriptionBanner}
-        >
-          {disabledReason}
-        </Banner>
-      )}
-
       {/* FAB Group */}
       <View style={styles.fabGroup}>
         {/* Generate FAB */}
@@ -851,23 +776,14 @@ export function AIProgramWriter({ programId }: AIProgramWriterProps) {
           icon={workouts.length > 0 ? "refresh" : "play"}
           label={workouts.length > 0 ? "Regenerate" : "Generate"}
           onPress={handleGenerateClick}
-          disabled={isGenerating || !isEligibleToGenerate}
+          disabled={isGenerating}
           style={[
             styles.fab,
             workouts.length > 0 && {
               backgroundColor: theme.colors.errorContainer,
             },
-            !isEligibleToGenerate && {
-              backgroundColor: theme.colors.surfaceDisabled,
-            },
           ]}
-          color={
-            !isEligibleToGenerate
-              ? theme.colors.onSurfaceDisabled
-              : workouts.length > 0
-                ? theme.colors.error
-                : undefined
-          }
+          color={workouts.length > 0 ? theme.colors.error : undefined}
         />
       </View>
 
@@ -969,8 +885,4 @@ const styles = StyleSheet.create({
     alignItems: "flex-end",
   },
   fab: {},
-  subscriptionBanner: {
-    marginHorizontal: 16,
-    marginBottom: 80, // Space for FAB
-  },
 });

@@ -95,7 +95,7 @@ export default function AIFeedbackCard({ workoutResultId, autoGenerate = false }
         <View style={styles.header}>
           <Text style={styles.robotIcon}>🤖</Text>
           <Text variant="titleMedium" style={styles.title}>
-            AI Coach Feedback
+            AI Feedback
           </Text>
         </View>
         <Text variant="bodyMedium" style={styles.description}>
@@ -147,7 +147,7 @@ export default function AIFeedbackCard({ workoutResultId, autoGenerate = false }
         <View style={styles.headerLeft}>
           <Text style={styles.robotIcon}>🤖</Text>
           <Text variant="titleMedium" style={styles.title}>
-            AI Coach Feedback
+            AI Feedback
           </Text>
         </View>
         <Text style={styles.expandIcon}>{expanded ? "−" : "+"}</Text>
