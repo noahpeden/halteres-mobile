@@ -289,7 +289,7 @@ export default function AthleteHomeScreen() {
                     No workout scheduled for today
                   </Text>
                   <Text variant="bodySmall" style={styles.workoutSubtext}>
-                    {`Create your 8-week program to get started.`}
+                    {`Create your program to get started.`}
                   </Text>
                   <Button
                     mode="contained"

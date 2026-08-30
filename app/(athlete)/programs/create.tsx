@@ -1,7 +1,7 @@
 import { brandColors } from "@/app/_layout";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useRouter } from "expo-router";
-import { ArrowLeft, Clock, FileText, Sparkles } from "lucide-react-native";
+import { ArrowLeft, Clock, FileText, Sparkles, Target, Settings } from "lucide-react-native";
 import { useContext, useState } from "react";
 import { Controller, useForm } from "react-hook-form";
 import {
@@ -14,13 +14,14 @@ import {
   View,
 } from "react-native";
 import Animated, { FadeInDown } from "react-native-reanimated";
-import { Text, TextInput } from "react-native-paper";
+import { Button, Chip, Text, TextInput } from "react-native-paper";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { AuthContext } from "@/components/providers/AuthProvider";
 import { useClients, useCreateClient } from "@/hooks/useClients";
 import { useCreateProgram } from "@/hooks/usePrograms";
 import { type ProgramInput, programSchema } from "@/lib/validations/program.schema";
 import { supabase } from "@/lib/supabase/client";
+import { equipmentList, daysOfWeek, difficulties, goals } from "@/lib/constants/programConfig";
 
 /**
  * Creates a program for the current, self-coached athlete.
@@ -37,6 +38,14 @@ export default function CreateProgramScreen() {
   const { data: clients } = useClients();
 
   const [isLoading, setIsLoading] = useState(false);
+  // Intake local state
+  const [selectedEquipment, setSelectedEquipment] = useState<number[]>([]);
+  const [selectedDifficulty, setSelectedDifficulty] = useState<string>("intermediate");
+  const [selectedGoal, setSelectedGoal] = useState<string>("strength");
+  const [selectedDays, setSelectedDays] = useState<string[]>(["Monday", "Wednesday", "Friday"]);
+  const [sessionDuration, setSessionDuration] = useState<string>("60");
+  const [recentTraining, setRecentTraining] = useState<string>("");
+  const [programInfluences, setProgramInfluences] = useState<string>("");
 
   const {
     control,
@@ -110,12 +119,12 @@ export default function CreateProgramScreen() {
   const onSubmit = async (data: ProgramInput) => {
     try {
       setIsLoading(true);
-      // Enforce single active 8-week block
+      // Enforce single active program
       const activeProgramId = await findActiveProgramForUser();
       if (activeProgramId) {
         Alert.alert(
           "Active Program In Progress",
-          "You already have an active 8-week block. Opening it now."
+          "You already have an active program. Opening it now."
         );
         router.replace(`/(athlete)/programs/${activeProgramId}`);
         return;
@@ -123,9 +132,16 @@ export default function CreateProgramScreen() {
       const selfEntityId = await getOrCreateSelfEntityId();
       const result = await createProgram.mutateAsync({
         ...data,
-        duration_weeks: 8,
         client_id: selfEntityId,
         gym_id: null,
+        // Intake extensions
+        difficulty: selectedDifficulty,
+        goal: selectedGoal,
+        equipment: selectedEquipment,
+        days_of_week_names: selectedDays,
+        session_duration_minutes: Number.parseInt(sessionDuration || "60", 10),
+        recent_training_history: recentTraining,
+        program_influences: programInfluences,
       });
 
       if (result && typeof result === "object" && "id" in result) {
@@ -243,17 +259,190 @@ export default function CreateProgramScreen() {
               name="duration_weeks"
               render={({ field: { onChange, onBlur, value } }) => (
                 <View style={styles.inputContainer}>
+                  <View style={styles.quickRow}>
+                    {[1, 8, 12].map((w) => (
+                      <Chip
+                        key={w}
+                        selected={value === w}
+                        onPress={() => onChange(w)}
+                        style={styles.chip}
+                      >
+                        {w} wk{w !== 1 ? "s" : ""}
+                      </Chip>
+                    ))}
+                  </View>
                   <TextInput
-                    label="Weeks"
-                    value="8"
-                    editable={false}
+                    label="Custom Weeks"
+                    placeholder="e.g., 6"
+                    value={value ? String(value) : ""}
+                    onChangeText={(text) => {
+                      const num = Number.parseInt(text, 10);
+                      if (!Number.isNaN(num)) onChange(num);
+                      else if (text === "") onChange(0);
+                    }}
+                    onBlur={onBlur}
+                    error={!!errors.duration_weeks}
+                    keyboardType="number-pad"
                     mode="outlined"
                     style={styles.input}
-                    right={<TextInput.Affix text="fixed" />}
+                    right={<TextInput.Affix text="weeks" />}
                   />
-                  <Text style={styles.fieldHint}>8 weeks is fixed for this block</Text>
+                  {errors.duration_weeks ? (
+                    <Text style={styles.errorText}>{errors.duration_weeks?.message}</Text>
+                  ) : (
+                    <Text style={styles.fieldHint}>Choose 1, 8, 12, or set a custom length</Text>
+                  )}
                 </View>
               )}
+            />
+          </Animated.View>
+
+          {/* Experience & Goals */}
+          <Animated.View entering={FadeInDown.duration(300).delay(350)} style={styles.formCard}>
+            <View style={styles.formCardHeader}>
+              <View style={[styles.formCardIconContainer, { backgroundColor: brandColors.smartBlue.container }]}>
+                <Target size={18} color={brandColors.smartBlue.DEFAULT} strokeWidth={2} />
+              </View>
+              <Text variant="titleSmall" style={styles.formCardTitle}>
+                Experience & Goals
+              </Text>
+            </View>
+            <View style={styles.inputContainer}>
+              <Text variant="labelLarge" style={styles.label}>Experience Level</Text>
+              <View style={styles.quickRow}>
+                {difficulties.map((d) => (
+                  <Chip
+                    key={d.value}
+                    selected={selectedDifficulty === d.value}
+                    onPress={() => setSelectedDifficulty(d.value)}
+                    style={styles.chip}
+                  >
+                    {d.label}
+                  </Chip>
+                ))}
+              </View>
+            </View>
+            <View style={styles.inputContainer}>
+              <Text variant="labelLarge" style={styles.label}>Primary Goal</Text>
+              <View style={styles.quickRow}>
+                {goals.map((g) => (
+                  <Chip
+                    key={g.value}
+                    selected={selectedGoal === g.value}
+                    onPress={() => setSelectedGoal(g.value)}
+                    style={styles.chip}
+                  >
+                    {g.label}
+                  </Chip>
+                ))}
+              </View>
+            </View>
+          </Animated.View>
+
+          {/* Equipment */}
+          <Animated.View entering={FadeInDown.duration(300).delay(400)} style={styles.formCard}>
+            <View style={styles.formCardHeader}>
+              <View style={[styles.formCardIconContainer, { backgroundColor: brandColors.practicalGray.container }]}>
+                <Settings size={18} color={brandColors.practicalGray.DEFAULT} strokeWidth={2} />
+              </View>
+              <Text variant="titleSmall" style={styles.formCardTitle}>
+                Available Equipment (Hard Constraint)
+              </Text>
+            </View>
+            <Text variant="bodySmall" style={styles.fieldHint}>
+              Only workouts that use selected equipment will be programmed.
+            </Text>
+            <View style={styles.multiWrap}>
+              {equipmentList.map((eq) => {
+                const isSelected = selectedEquipment.includes(eq.value);
+                return (
+                  <Chip
+                    key={eq.value}
+                    selected={isSelected}
+                    onPress={() =>
+                      setSelectedEquipment((prev) =>
+                        prev.includes(eq.value) ? prev.filter((v) => v !== eq.value) : [...prev, eq.value],
+                      )
+                    }
+                    style={styles.chip}
+                  >
+                    {eq.label}
+                  </Chip>
+                );
+              })}
+            </View>
+          </Animated.View>
+
+          {/* Scheduling */}
+          <Animated.View entering={FadeInDown.duration(300).delay(450)} style={styles.formCard}>
+            <View style={styles.formCardHeader}>
+              <View style={[styles.formCardIconContainer, { backgroundColor: brandColors.thrivingGreen.container }]}>
+                <Clock size={18} color={brandColors.thrivingGreen.DEFAULT} strokeWidth={2} />
+              </View>
+              <Text variant="titleSmall" style={styles.formCardTitle}>
+                Scheduling
+              </Text>
+            </View>
+            <Text variant="labelLarge" style={styles.label}>Days of Week</Text>
+            <View style={styles.quickRow}>
+              {daysOfWeek.map((d) => {
+                const isSelected = selectedDays.includes(d.value);
+                return (
+                  <Chip
+                    key={d.value}
+                    selected={isSelected}
+                    onPress={() =>
+                      setSelectedDays((prev) =>
+                        prev.includes(d.value) ? prev.filter((v) => v !== d.value) : [...prev, d.value],
+                      )
+                    }
+                    style={styles.chip}
+                  >
+                    {d.label}
+                  </Chip>
+                );
+              })}
+            </View>
+            <Text variant="labelLarge" style={[styles.label, { marginTop: 12 }]}>Session Duration (minutes)</Text>
+            <TextInput
+              mode="outlined"
+              keyboardType="number-pad"
+              value={sessionDuration}
+              onChangeText={setSessionDuration}
+              style={styles.input}
+              placeholder="e.g., 60"
+            />
+          </Animated.View>
+
+          {/* Training Context */}
+          <Animated.View entering={FadeInDown.duration(300).delay(500)} style={styles.formCard}>
+            <View style={styles.formCardHeader}>
+              <View style={[styles.formCardIconContainer, { backgroundColor: brandColors.smartBlue.container }]}>
+                <FileText size={18} color={brandColors.smartBlue.DEFAULT} strokeWidth={2} />
+              </View>
+              <Text variant="titleSmall" style={styles.formCardTitle}>
+                Training Context
+              </Text>
+            </View>
+            <TextInput
+              label="Recent Training History"
+              mode="outlined"
+              value={recentTraining}
+              onChangeText={setRecentTraining}
+              placeholder="What have you been doing the past couple months?"
+              multiline
+              numberOfLines={4}
+              style={[styles.input, styles.textArea]}
+            />
+            <TextInput
+              label="Program Influences (Methods, Coaches, Named Programs)"
+              mode="outlined"
+              value={programInfluences}
+              onChangeText={setProgramInfluences}
+              placeholder="e.g., Texas Method, 5/3/1, Rich Froning style conditioning"
+              multiline
+              numberOfLines={4}
+              style={[styles.input, styles.textArea]}
             />
           </Animated.View>
 
@@ -333,6 +522,10 @@ const styles = StyleSheet.create({
   textArea: { minHeight: 100 },
   errorText: { color: "#dc2626", fontSize: 12, marginTop: 4, marginLeft: 4 },
   fieldHint: { color: brandColors.practicalGray.DEFAULT, fontSize: 12, marginTop: 4, marginLeft: 4 },
+  label: { marginBottom: 6, fontWeight: "600" },
+  quickRow: { flexDirection: "row", flexWrap: "wrap", gap: 8, marginBottom: 8 },
+  multiWrap: { flexDirection: "row", flexWrap: "wrap", gap: 8 },
+  chip: { marginRight: 4, marginBottom: 6 },
   buttonContainer: { gap: 12, marginTop: 8 },
   primaryButton: {
     backgroundColor: brandColors.smartBlue.DEFAULT,

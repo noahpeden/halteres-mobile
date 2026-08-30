@@ -422,8 +422,8 @@ export function AIProgramWriter({ programId }: AIProgramWriterProps) {
       {
         label: "Number of Weeks",
         value: `${formState.numberOfWeeks} weeks`,
-        isValid: formState.numberOfWeeks >= 1 && formState.numberOfWeeks <= 8,
-        errorMessage: "Select 1-8 weeks",
+        isValid: formState.numberOfWeeks >= 1 && formState.numberOfWeeks <= 52,
+        errorMessage: "Select 1–52 weeks",
       },
       {
         label: "Start Date",
@@ -743,7 +743,7 @@ export function AIProgramWriter({ programId }: AIProgramWriterProps) {
           startDate={formState.startDate}
           endDate={formState.endDate}
           onDayToggle={handleDayToggle}
-          onWeeksChange={(_v) => updateField("numberOfWeeks", 8)}
+          onWeeksChange={(v) => updateField("numberOfWeeks", v)}
           onStartDateChange={(v) => updateField("startDate", v)}
           onFieldBlur={handleFieldBlur}
         />
