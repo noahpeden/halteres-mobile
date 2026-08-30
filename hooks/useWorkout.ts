@@ -2,6 +2,7 @@ import { useCallback, useEffect, useState } from "react";
 import { supabase } from "@/lib/supabase/client";
 import { API_BASE } from "@/lib/api/getApiUrl";
 import type { Workout } from "./useProgramWorkoutsMobile";
+import { getAuthToken } from "@/lib/auth/token";
 
 type EnhancedWorkout = {
   title: string;
@@ -192,19 +193,14 @@ export function useWorkout(workoutId: string) {
     error?: string;
   }> => {
     try {
-      const {
-        data: { session },
-      } = await supabase.auth.getSession();
-
-      if (!session?.access_token) {
-        return { success: false, error: "Not authenticated" };
-      }
+      const token = await getAuthToken();
+      if (!token) return { success: false, error: "Not authenticated" };
 
       const response = await fetch(`${API_BASE}/api/enhance-workout`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
-          Authorization: `Bearer ${session.access_token}`,
+          Authorization: `Bearer ${token}`,
         },
         body: JSON.stringify(payload),
       });

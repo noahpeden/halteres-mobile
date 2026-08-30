@@ -1,6 +1,7 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/lib/supabase/client";
 import type { ClientInput, EntityType } from "@/lib/validations/program.schema";
+import { useAuth } from "@/hooks/useAuth";
 
 // Client metrics matching web app's entity fields
 export type ClientMetrics = {
@@ -69,14 +70,11 @@ export type ClientUpdateInput = {
 
 // Match web app: query entities directly from Supabase
 export function useClients() {
+  const { user } = useAuth();
   return useQuery<Client[]>({
     queryKey: ["clients"],
     queryFn: async () => {
-      const {
-        data: { user },
-      } = await supabase.auth.getUser();
-
-      if (!user) {
+      if (!user?.id) {
         throw new Error("Not authenticated");
       }
 
@@ -116,14 +114,11 @@ export function useClient(id: string) {
 // Match web app: insert directly into Supabase entities table with metrics
 export function useCreateClient() {
   const queryClient = useQueryClient();
+  const { user } = useAuth();
 
   return useMutation({
     mutationFn: async (data: ClientUpdateInput): Promise<Client> => {
-      const {
-        data: { user },
-      } = await supabase.auth.getUser();
-
-      if (!user) {
+      if (!user?.id) {
         throw new Error("Not authenticated");
       }
 
@@ -179,6 +174,7 @@ export function useCreateClient() {
 
 export function useUpdateClient() {
   const queryClient = useQueryClient();
+  const { user } = useAuth();
 
   return useMutation({
     mutationFn: async ({
@@ -188,11 +184,7 @@ export function useUpdateClient() {
       id: string;
       data: ClientUpdateInput;
     }): Promise<Client> => {
-      const {
-        data: { user },
-      } = await supabase.auth.getUser();
-
-      if (!user) {
+      if (!user?.id) {
         throw new Error("Not authenticated");
       }
 

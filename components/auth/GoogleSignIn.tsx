@@ -1,72 +1,30 @@
 import * as AuthSession from "expo-auth-session";
 import * as WebBrowser from "expo-web-browser";
 import { useState } from "react";
-import { Alert, StyleSheet, View } from "react-native";
+import { Alert, Platform, StyleSheet, View } from "react-native";
 import { Button, Text } from "react-native-paper";
 import Svg, { Path } from "react-native-svg";
-import { supabase } from "@/lib/supabase/client";
+import { useOAuth } from "@clerk/expo";
 
 // Complete any pending auth sessions
 WebBrowser.maybeCompleteAuthSession();
 
-// Google OAuth configuration
-const redirectUri = AuthSession.makeRedirectUri({
-  scheme: "halteres",
-  path: "auth/callback",
-});
+// OAuth redirect configuration
+const redirectUri = AuthSession.makeRedirectUri({ scheme: "halteres" });
 
 export function GoogleSignIn() {
   const [isLoading, setIsLoading] = useState(false);
+  const googleOAuth = useOAuth({ strategy: "oauth_google" });
+  const appleOAuth = useOAuth({ strategy: "oauth_apple" });
 
   const handleGoogleSignIn = async () => {
     try {
       setIsLoading(true);
-
-      // Start OAuth flow with Supabase
-      const { data, error } = await supabase.auth.signInWithOAuth({
-        provider: "google",
-        options: {
-          redirectTo: redirectUri,
-          skipBrowserRedirect: true,
-          queryParams: {
-            access_type: "offline",
-            prompt: "consent",
-          },
-        },
+      const { createdSessionId, setActive } = await googleOAuth.startOAuthFlow({
+        redirectUrl: redirectUri,
       });
-
-      if (error) throw error;
-
-      if (data?.url) {
-        // Open the OAuth URL in a web browser
-        const result = await WebBrowser.openAuthSessionAsync(
-          data.url,
-          redirectUri,
-        );
-
-        if (result.type === "success") {
-          // Extract the URL and get the session
-          const url = result.url;
-
-          // Parse the URL to get the tokens
-          // The URL will be something like: halteres://auth/callback#access_token=...&refresh_token=...
-          const hashParams = new URLSearchParams(url.split("#")[1]);
-          const accessToken = hashParams.get("access_token");
-          const refreshToken = hashParams.get("refresh_token");
-
-          if (accessToken && refreshToken) {
-            // Set the session manually
-            const { error: sessionError } = await supabase.auth.setSession({
-              access_token: accessToken,
-              refresh_token: refreshToken,
-            });
-
-            if (sessionError) throw sessionError;
-          }
-        } else if (result.type === "cancel") {
-          // User cancelled, do nothing
-          console.log("User cancelled Google sign-in");
-        }
+      if (createdSessionId) {
+        await setActive!({ session: createdSessionId });
       }
     } catch (error) {
       console.error("Google Sign-In error:", error);
@@ -75,6 +33,28 @@ export function GoogleSignIn() {
         error instanceof Error
           ? error.message
           : "Failed to sign in with Google",
+      );
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const handleAppleSignIn = async () => {
+    try {
+      setIsLoading(true);
+      const { createdSessionId, setActive } = await appleOAuth.startOAuthFlow({
+        redirectUrl: redirectUri,
+      });
+      if (createdSessionId) {
+        await setActive!({ session: createdSessionId });
+      }
+    } catch (error) {
+      console.error("Apple Sign-In error:", error);
+      Alert.alert(
+        "Error",
+        error instanceof Error
+          ? error.message
+          : "Failed to sign in with Apple",
       );
     } finally {
       setIsLoading(false);
@@ -119,6 +99,20 @@ export function GoogleSignIn() {
       >
         Continue with Google
       </Button>
+
+      {Platform.OS === "ios" && (
+        <Button
+          mode="outlined"
+          onPress={handleAppleSignIn}
+          loading={isLoading}
+          disabled={isLoading}
+          style={[styles.button, { marginTop: 8 }]}
+          contentStyle={styles.buttonContent}
+          icon="apple"
+        >
+          Continue with Apple
+        </Button>
+      )}
     </View>
   );
 }

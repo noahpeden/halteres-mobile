@@ -32,7 +32,7 @@ import { supabase } from "@/lib/supabase/client";
  */
 export default function CreateProgramScreen() {
   const router = useRouter();
-  const { profile } = useContext(AuthContext);
+  const { profile, user: authUser } = useContext(AuthContext);
   const createProgram = useCreateProgram();
   const createClient = useCreateClient();
   const { data: clients } = useClients();
@@ -67,16 +67,13 @@ export default function CreateProgramScreen() {
 
   // Check for an existing active program (today within start/end)
   const findActiveProgramForUser = async (): Promise<string | null> => {
-    const {
-      data: { user },
-    } = await supabase.auth.getUser();
-    if (!user) return null;
+    if (!authUser?.id) return null;
 
     // Get all of this user's entities (self-coached)
     const { data: entities } = await supabase
       .from("entities")
       .select("id")
-      .eq("user_id", user.id)
+      .eq("user_id", authUser.id)
       .is("deleted_at", null);
     const entityIds = (entities || []).map((e) => e.id);
     if (entityIds.length === 0) return null;

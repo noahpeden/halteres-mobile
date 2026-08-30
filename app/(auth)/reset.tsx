@@ -13,7 +13,7 @@ import {
 import { SafeAreaView } from "react-native-safe-area-context";
 import { Button, HelperText, Text, TextInput } from "react-native-paper";
 import { z } from "zod";
-import { supabase } from "@/lib/supabase/client";
+import { useSignIn } from "@clerk/expo";
 
 const resetSchema = z.object({
   email: z.string().email("Invalid email address"),
@@ -23,6 +23,7 @@ type ResetInput = z.infer<typeof resetSchema>;
 
 export default function ResetPasswordScreen() {
   const [isLoading, setIsLoading] = useState(false);
+  const { signIn } = useSignIn();
 
   const {
     control,
@@ -38,13 +39,12 @@ export default function ResetPasswordScreen() {
   const onSubmit = async (data: ResetInput) => {
     try {
       setIsLoading(true);
-      const { error } = await supabase.auth.resetPasswordForEmail(data.email, {
-        redirectTo: "https://halteres.ai/auth/callback?reset=true",
+      // Trigger Clerk password reset email flow
+      if (!signIn) throw new Error("Auth not ready");
+      await signIn.create({
+        strategy: "reset_password_email_code",
+        identifier: data.email,
       });
-
-      if (error) {
-        throw error;
-      }
 
       Alert.alert(
         "Check your email",

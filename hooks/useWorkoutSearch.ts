@@ -1,6 +1,6 @@
 import { useCallback, useState } from "react";
 import { API_BASE } from "@/lib/api/getApiUrl";
-import { supabase } from "@/lib/supabase/client";
+import { getAuthToken } from "@/lib/auth/token";
 
 export type SearchWorkout = {
   id: string;
@@ -37,20 +37,14 @@ export function useWorkoutSearch() {
     setError(null);
 
     try {
-      // Get auth session for API call
-      const {
-        data: { session },
-      } = await supabase.auth.getSession();
-
-      if (!session?.access_token) {
-        throw new Error("Not authenticated");
-      }
+      const token = await getAuthToken();
+      if (!token) throw new Error("Not authenticated");
 
       const response = await fetch(`${API_BASE}/api/search-workouts`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
-          Authorization: `Bearer ${session.access_token}`,
+          Authorization: `Bearer ${token}`,
         },
         body: JSON.stringify({
           searchQuery,

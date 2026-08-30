@@ -2,7 +2,7 @@ import { useCallback, useRef, useState } from "react";
 import { API_BASE } from "@/lib/api/getApiUrl";
 import { createSSEClientWithPost } from "@/lib/api/sseClient";
 import { dayNameToNumber, equipmentList } from "@/lib/constants/programConfig";
-import { supabase } from "@/lib/supabase/client";
+import { getAuthToken } from "@/lib/auth/token";
 import type {
   EnhancementProgress,
   EnhancementSSEEvent,
@@ -128,11 +128,8 @@ export function useTwoPhaseGeneration(programId: string) {
           }
 
           // Get auth token
-          const {
-            data: { session },
-          } = await supabase.auth.getSession();
-
-          if (!session?.access_token) {
+          const token = await getAuthToken();
+          if (!token) {
             throw new Error("No authentication token");
           }
 
@@ -221,7 +218,7 @@ export function useTwoPhaseGeneration(programId: string) {
 
           await createSSEClientWithPost(apiUrl, requestBody, {
             headers: {
-              Authorization: `Bearer ${session.access_token}`,
+              Authorization: `Bearer ${token}`,
             },
             signal: controller.signal,
             onOpen: () => {
@@ -337,13 +334,8 @@ export function useTwoPhaseGeneration(programId: string) {
       startTimer();
 
       try {
-        const {
-          data: { session },
-        } = await supabase.auth.getSession();
-
-        if (!session?.access_token) {
-          throw new Error("No authentication token");
-        }
+        const token = await getAuthToken();
+        if (!token) throw new Error("No authentication token");
 
         const requestBody: EnhanceWeekRequest = {
           programId,
@@ -377,7 +369,7 @@ export function useTwoPhaseGeneration(programId: string) {
 
         await createSSEClientWithPost(apiUrl, requestBody, {
           headers: {
-            Authorization: `Bearer ${session.access_token}`,
+            Authorization: `Bearer ${token}`,
           },
           signal: controller.signal,
           onOpen: () => {

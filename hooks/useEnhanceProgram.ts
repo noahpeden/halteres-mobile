@@ -1,6 +1,7 @@
 import { useState, useCallback } from "react";
 import { supabase } from "@/lib/supabase/client";
 import { API_BASE } from "@/lib/api/getApiUrl";
+import { getAuthToken } from "@/lib/auth/token";
 
 export type EnhancedWorkout = {
   id: string;
@@ -34,13 +35,8 @@ export function useEnhanceProgram() {
       setError(null);
 
       try {
-        const {
-          data: { session },
-        } = await supabase.auth.getSession();
-
-        if (!session?.access_token) {
-          throw new Error("Not authenticated");
-        }
+        const token = await getAuthToken();
+        if (!token) throw new Error("Not authenticated");
 
         console.log("[Enhance] Starting enhancement with", payload.workouts.length, "workouts");
 
@@ -48,7 +44,7 @@ export function useEnhanceProgram() {
           method: "POST",
           headers: {
             "Content-Type": "application/json",
-            Authorization: `Bearer ${session.access_token}`,
+            Authorization: `Bearer ${token}`,
           },
           body: JSON.stringify(payload),
         });

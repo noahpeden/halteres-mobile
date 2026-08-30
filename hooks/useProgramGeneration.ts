@@ -1,5 +1,5 @@
 import { useState, useRef, useCallback } from "react";
-import { supabase } from "@/lib/supabase/client";
+import { getAuthToken } from "@/lib/auth/token";
 import { createSSEClientWithPost } from "@/lib/api/sseClient";
 import { equipmentList, dayNameToNumber } from "@/lib/constants/programConfig";
 import { API_BASE } from "@/lib/api/getApiUrl";
@@ -116,13 +116,8 @@ export function useProgramGeneration(programId: string) {
           }
 
           // Get auth token
-          const {
-            data: { session },
-          } = await supabase.auth.getSession();
-
-          if (!session?.access_token) {
-            throw new Error("No authentication token");
-          }
+          const token = await getAuthToken();
+          if (!token) throw new Error("No authentication token");
 
           // Convert equipment IDs to labels
           const selectedEquipmentNames = formData.equipment
@@ -225,7 +220,7 @@ export function useProgramGeneration(programId: string) {
           // Start SSE stream
           await createSSEClientWithPost(apiUrl, requestBody, {
             headers: {
-              Authorization: `Bearer ${session.access_token}`,
+              Authorization: `Bearer ${token}`,
             },
             signal: controller.signal,
             onOpen: () => {

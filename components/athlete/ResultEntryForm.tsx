@@ -10,6 +10,7 @@ import {
 } from "react-native-paper";
 import { supabase } from "@/lib/supabase/client";
 import { brandColors } from "@/app/_layout";
+import { useAuth } from "@/hooks/useAuth";
 
 type ResultType = "time" | "rounds_reps" | "weight" | "reps" | "distance" | "calories";
 type Scale = "rx" | "scaled" | "rx_plus";
@@ -38,6 +39,7 @@ export default function ResultEntryForm({
   onCancel,
   defaultResultType = "time",
 }: Props) {
+  const { user } = useAuth();
   const [resultType, setResultType] = useState<ResultType>(defaultResultType);
   const [scale, setScale] = useState<Scale>("rx");
   const [loading, setLoading] = useState(false);
@@ -59,8 +61,7 @@ export default function ResultEntryForm({
     setError(null);
 
     try {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) throw new Error("Not authenticated");
+      if (!user?.id) throw new Error("Not authenticated");
 
       const resultData: any = {
         user_id: user.id,

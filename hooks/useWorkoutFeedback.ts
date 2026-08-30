@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState } from 'react';
-import { supabase } from '@/lib/supabase/client';
+import { getAuthToken } from '@/lib/auth/token';
 import { API_BASE } from '@/lib/api/getApiUrl';
 
 type FeedbackRating = 'thumbs_up' | 'thumbs_down';
@@ -49,14 +49,14 @@ export function useTemplateFeedback(workoutId: string, gymId?: string) {
     if (!workoutId) return;
 
     try {
-      const { data: { session } } = await supabase.auth.getSession();
-      if (!session?.access_token) return;
+      const token = await getAuthToken();
+      if (!token) return;
 
       const response = await fetch(
         `${API_BASE}/api/workout-feedback/template?workoutId=${workoutId}`,
         {
           headers: {
-            Authorization: `Bearer ${session.access_token}`,
+            Authorization: `Bearer ${token}`,
           },
         }
       );
@@ -83,8 +83,8 @@ export function useTemplateFeedback(workoutId: string, gymId?: string) {
     setError(null);
 
     try {
-      const { data: { session } } = await supabase.auth.getSession();
-      if (!session?.access_token) {
+      const token = await getAuthToken();
+      if (!token) {
         setError('Not authenticated');
         return { success: false, error: 'Not authenticated' };
       }
@@ -93,7 +93,7 @@ export function useTemplateFeedback(workoutId: string, gymId?: string) {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          Authorization: `Bearer ${session.access_token}`,
+          Authorization: `Bearer ${token}`,
         },
         body: JSON.stringify({
           workoutId,
@@ -125,15 +125,15 @@ export function useTemplateFeedback(workoutId: string, gymId?: string) {
   const deleteFeedback = async () => {
     setLoading(true);
     try {
-      const { data: { session } } = await supabase.auth.getSession();
-      if (!session?.access_token) return { success: false };
+      const token = await getAuthToken();
+      if (!token) return { success: false };
 
       const response = await fetch(
         `${API_BASE}/api/workout-feedback/template?workoutId=${workoutId}`,
         {
           method: 'DELETE',
           headers: {
-            Authorization: `Bearer ${session.access_token}`,
+            Authorization: `Bearer ${token}`,
           },
         }
       );
@@ -217,8 +217,8 @@ export function useResultFeedback(workoutResultId: string, gymId?: string) {
     setError(null);
 
     try {
-      const { data: { session } } = await supabase.auth.getSession();
-      if (!session?.access_token) {
+      const token = await getAuthToken();
+      if (!token) {
         setError('Not authenticated');
         return { success: false, error: 'Not authenticated' };
       }
@@ -227,7 +227,7 @@ export function useResultFeedback(workoutResultId: string, gymId?: string) {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          Authorization: `Bearer ${session.access_token}`,
+          Authorization: `Bearer ${token}`,
         },
         body: JSON.stringify({
           workoutResultId,
