@@ -198,7 +198,7 @@ export function useCreateProgram() {
           equipment: equipmentNames,
         },
         session_details: {
-          duration: (data as any).session_duration_minutes || 60,
+          duration_minutes: (data as any).session_duration_minutes || 60,
         },
       };
 

@@ -31,7 +31,7 @@ export function getApiUrl(): string {
   }
 
   // Production fallback
-  return "https://halteres.ai";
+  return "https://app.halteres.ai";
 }
 
 export const API_BASE = getApiUrl();
