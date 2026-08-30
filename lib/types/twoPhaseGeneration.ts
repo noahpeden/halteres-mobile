@@ -174,6 +174,7 @@ export type SkeletonGenerationRequest = {
   session_details?: Record<string, unknown>;
   program_overview?: Record<string, unknown>;
   workout_format?: string[];
+  forceRegenerate?: boolean;
 };
 
 /**
@@ -189,6 +190,11 @@ export type EnhanceWeekRequest = {
     equipment?: string[];
     useImperial?: boolean;
     trainingMethodology?: string;
+    numberOfWeeks?: number;
+    session_details?: Record<string, unknown>;
+    workout_format?: string[];
+    focus_area?: string;
+    referenceInput?: string;
   };
   weekSpecificInput?: string;
 };

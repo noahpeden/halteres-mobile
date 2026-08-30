@@ -11,7 +11,7 @@ import {
 } from "react-native-paper";
 import { daysOfWeek } from "@/lib/constants/programConfig";
 
-const weekOptions = [1, 2, 3, 4, 5, 6, 7, 8];
+const weekOptions = Array.from({ length: 52 }, (_, i) => i + 1);
 
 type ProgramSchedulingProps = {
   selectedDays: string[];
@@ -129,9 +129,7 @@ export function ProgramScheduling({
               />
             ))}
           </Menu>
-          <Text variant="bodySmall" style={styles.helperText}>
-            Maximum 8 weeks per program
-          </Text>
+          {/* Helper text removed per product update */}
         </View>
 
         {/* Start Date */}

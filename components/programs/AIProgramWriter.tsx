@@ -66,7 +66,7 @@ const defaultFormState: FormState = {
   numberOfWeeks: 8,
   startDate: "",
   endDate: "",
-  gymType: "Crossfit Box",
+  gymType: "Other",
   difficulty: "intermediate",
   equipment: [],
   focusArea: "full_body",
@@ -292,11 +292,14 @@ export function AIProgramWriter({ programId }: AIProgramWriterProps) {
           calendarData.duration_weeks || program.duration_weeks || 4,
         startDate: calendarData.start_date || program.start_date || "",
         endDate: calendarData.end_date || program.end_date || "",
-        gymType: gymDetails.gym_type || "Crossfit Box",
+        gymType: gymDetails.gym_type || "Other",
         difficulty: program.difficulty || "intermediate",
         equipment: equipmentIds,
         focusArea: program.focus_area || "full_body",
-        sessionDuration: sessionDetails.duration || 60,
+        sessionDuration:
+          (sessionDetails as any)?.duration_minutes ??
+          (sessionDetails as any)?.duration ??
+          60,
         workoutFormats: workoutFormatsArray,
         goal: program.goal || "strength",
         entityId: program.entity_id || "",
@@ -372,7 +375,7 @@ export function AIProgramWriter({ programId }: AIProgramWriterProps) {
           program_type: formState.programType,
         },
         session_details: {
-          duration: formState.sessionDuration,
+          duration_minutes: formState.sessionDuration,
         },
         updated_at: new Date().toISOString(),
       };
@@ -455,13 +458,31 @@ export function AIProgramWriter({ programId }: AIProgramWriterProps) {
   const handleConfirmGeneration = useCallback(async () => {
     setShowConfirmModal(false);
 
+    // If regenerating, delete existing non-reference workouts before generating
+    if (workouts.length > 0) {
+      try {
+        await supabase
+          .from("program_workouts")
+          .delete()
+          .eq("program_id", programId)
+          .eq("is_reference", false);
+        await refetchWorkouts();
+      } catch (e) {
+        // Proceed even if cleanup fails; server may handle forceRegenerate
+      }
+    }
+
     const formData = {
       name: formState.name,
       description: formState.description,
       goal: formState.goal,
       difficulty: formState.difficulty,
       focusArea: formState.focusArea,
-      personalization: "",
+      // Do not send empty personalization if referenceInput provided
+      personalization:
+        formState.referenceInput && formState.referenceInput.trim().length > 0
+          ? undefined
+          : "",
       referenceInput: formState.referenceInput,
       trainingMethodology: formState.trainingMethodology,
       numberOfWeeks: formState.numberOfWeeks,
@@ -472,9 +493,10 @@ export function AIProgramWriter({ programId }: AIProgramWriterProps) {
       gymType: formState.gymType,
       equipment: formState.equipment,
       workoutFormats: formState.workoutFormats,
-      sessionDetails: { duration: formState.sessionDuration },
+      sessionDetails: { duration_minutes: formState.sessionDuration },
       programType: formState.programType,
       entityId: formState.entityId,
+      forceRegenerate: workouts.length > 0,
     };
 
     // Use two-phase skeleton generation
@@ -499,6 +521,11 @@ export function AIProgramWriter({ programId }: AIProgramWriterProps) {
         difficulty: formState.difficulty,
         equipment: equipmentNames,
         trainingMethodology: formState.trainingMethodology,
+        numberOfWeeks: formState.numberOfWeeks,
+        session_details: { duration_minutes: formState.sessionDuration },
+        workout_format: formState.workoutFormats,
+        focus_area: formState.focusArea,
+        referenceInput: formState.referenceInput,
         useImperial: true,
       });
 
@@ -549,6 +576,11 @@ export function AIProgramWriter({ programId }: AIProgramWriterProps) {
           difficulty: formState.difficulty,
           equipment: equipmentNames,
           trainingMethodology: formState.trainingMethodology,
+          numberOfWeeks: formState.numberOfWeeks,
+          session_details: { duration_minutes: formState.sessionDuration },
+          workout_format: formState.workoutFormats,
+          focus_area: formState.focusArea,
+          referenceInput: formState.referenceInput,
           useImperial: true,
         });
 
@@ -803,7 +835,7 @@ export function AIProgramWriter({ programId }: AIProgramWriterProps) {
           actions={[
             {
               label: "Upgrade",
-              onPress: () => router.push("/settings"),
+              onPress: () => router.push("/(athlete)/profile"),
             },
           ]}
           style={styles.subscriptionBanner}

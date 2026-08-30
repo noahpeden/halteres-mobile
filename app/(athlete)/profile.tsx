@@ -17,7 +17,6 @@ import {
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useRouter } from "expo-router";
 import {
-  Building2,
   LogOut,
   ChevronRight,
   Dumbbell,
@@ -56,8 +55,6 @@ export default function ProfileScreen() {
   const {
     user,
     profile,
-    currentGym,
-    gymMemberships,
     athleteMetrics,
     signOut,
     refetchProfile,
@@ -258,16 +255,7 @@ export default function ProfileScreen() {
               <Text variant="bodyMedium" style={styles.email}>
                 {user?.email}
               </Text>
-              {currentGym && (
-                <Chip
-                  icon={() => <Building2 size={14} color={brandColors.smartBlue.DEFAULT} />}
-                  style={styles.gymChip}
-                  textStyle={styles.gymChipText}
-                  compact
-                >
-                  {currentGym.name}
-                </Chip>
-              )}
+              {/* Gym chip removed - gym context not provided */}
             </View>
           </View>
         </Surface>
@@ -435,16 +423,7 @@ export default function ProfileScreen() {
             onPress={handleEditProfile}
             style={styles.listItem}
           />
-          {gymMemberships.length > 1 && (
-            <List.Item
-              title="Switch Gym"
-              description={`${gymMemberships.length} gyms available`}
-              left={(props) => <List.Icon {...props} icon="swap-horizontal" />}
-              right={() => <ChevronRight size={20} color="#666" />}
-              onPress={() => router.push("/(auth)/join-gym")}
-              style={styles.listItem}
-            />
-          )}
+          {/* Switch Gym removed - gym membership UI not available in B2C */}
         </View>
 
         <Button

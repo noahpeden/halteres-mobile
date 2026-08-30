@@ -39,6 +39,7 @@ export type ProgramFormData = {
   entityId: string;
   programOverview?: Record<string, unknown>;
   gymDetails?: Record<string, unknown>;
+  forceRegenerate?: boolean;
 };
 
 export type TwoPhaseGenerationResult = {
@@ -171,7 +172,9 @@ export function useTwoPhaseGeneration(programId: string) {
             goal: formData.goal,
             difficulty: formData.difficulty,
             focus_area: formData.focusArea,
-            personalization: formData.personalization,
+            ...(formData.personalization
+              ? { personalization: formData.personalization }
+              : {}),
             referenceInput: formData.referenceInput || "",
             trainingMethodology: formData.trainingMethodology,
             duration_weeks: formData.numberOfWeeks,
@@ -193,6 +196,7 @@ export function useTwoPhaseGeneration(programId: string) {
             session_details: formData.sessionDetails,
             program_overview: formData.programOverview,
             workout_format: formData.workoutFormats || [],
+            forceRegenerate: !!formData.forceRegenerate,
           };
 
           setStage("generating_skeleton");
