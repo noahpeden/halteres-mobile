@@ -3,7 +3,7 @@ import { View, StyleSheet, ScrollView, RefreshControl, TouchableOpacity } from "
 import { Text, Surface, Button, Card, ActivityIndicator } from "react-native-paper";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useRouter } from "expo-router";
-import { Calendar, Dumbbell, Clock, Trophy, TrendingUp } from "lucide-react-native";
+import { Calendar, Dumbbell, Clock, TrendingUp } from "lucide-react-native";
 import { AuthContext } from "@/components/providers/AuthProvider";
 import { supabase } from "@/lib/supabase/client";
 import { brandColors } from "@/app/_layout";
@@ -36,7 +36,7 @@ type RecentResult = {
 
 export default function AthleteHomeScreen() {
   const router = useRouter();
-  const { user, profile, currentGym, gymMemberships, refetchProfile } = useContext(AuthContext);
+  const { user, profile, refetchProfile } = useContext(AuthContext);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [todaysWorkouts, setTodaysWorkouts] = useState<Workout[]>([]);
@@ -49,14 +49,12 @@ export default function AthleteHomeScreen() {
   });
 
   const displayName = profile?.display_name || profile?.full_name || "Athlete";
-  const hasGym = gymMemberships && gymMemberships.length > 0;
-
   // Check if onboarding is needed
   useEffect(() => {
-    if (profile && currentGym && !profile.onboarding_completed) {
+    if (profile && !profile.onboarding_completed) {
       setShowOnboarding(true);
     }
-  }, [profile, currentGym]);
+  }, [profile]);
 
   const handleOnboardingComplete = async () => {
     setShowOnboarding(false);
@@ -66,7 +64,7 @@ export default function AthleteHomeScreen() {
   };
 
   const fetchData = useCallback(async () => {
-    if (!currentGym?.id || !user?.id) {
+    if (!user?.id) {
       setLoading(false);
       return;
     }
@@ -76,20 +74,59 @@ export default function AthleteHomeScreen() {
       const startOfDay = `${today}T00:00:00.000Z`;
       const endOfDay = `${today}T23:59:59.999Z`;
 
-      // Fetch today's workouts
-      const { data: workouts } = await supabase
-        .from("program_workouts")
-        .select(`
-          id, name, workout_type, description,
-          program:programs!inner (gym_id)
-        `)
-        .eq("program.gym_id", currentGym.id)
-        .gte("scheduled_date", startOfDay)
-        .lte("scheduled_date", endOfDay)
+      // Determine the user's active program (today within calendar range)
+      const { data: entities } = await supabase
+        .from("entities")
+        .select("id")
+        .eq("user_id", user.id)
         .is("deleted_at", null);
+      const entityIds = (entities || []).map((e) => e.id);
+
+      let activeProgramId: string | null = null;
+      if (entityIds.length > 0) {
+        const { data: programs } = await supabase
+          .from("programs")
+          .select("id, calendar_data, created_at")
+          .in("entity_id", entityIds)
+          .is("deleted_at", null)
+          .order("created_at", { ascending: false });
+
+        if (programs && programs.length > 0) {
+          const todayDate = new Date(today);
+          for (const p of programs as any[]) {
+            const cal = p.calendar_data || {};
+            const start = cal.start_date ? new Date(cal.start_date) : null;
+            const end = cal.end_date ? new Date(cal.end_date) : null;
+            if (start && end) {
+              const startD = new Date(start.toISOString().split("T")[0]);
+              const endD = new Date(end.toISOString().split("T")[0]);
+              if (todayDate >= startD && todayDate <= endD) {
+                activeProgramId = p.id as string;
+                break;
+              }
+            }
+          }
+          // Fallback to most recent program if none active
+          if (!activeProgramId) {
+            activeProgramId = (programs[0] as any).id as string;
+          }
+        }
+      }
+
+      let workouts: any[] = [];
+      if (activeProgramId) {
+        const { data: todays } = await supabase
+          .from("program_workouts")
+          .select("id, name, workout_type, description, scheduled_date")
+          .eq("program_id", activeProgramId)
+          .gte("scheduled_date", startOfDay)
+          .lte("scheduled_date", endOfDay)
+          .is("deleted_at", null);
+        workouts = todays || [];
+      }
 
       // Check which workouts user has logged
-      const workoutIds = (workouts || []).map((w) => w.id);
+      const workoutIds = workouts.map((w) => w.id);
       const { data: userResults } = await supabase
         .from("workout_results")
         .select("workout_id")
@@ -99,7 +136,7 @@ export default function AthleteHomeScreen() {
 
       const loggedIds = new Set((userResults || []).map((r) => r.workout_id));
       setTodaysWorkouts(
-        (workouts || []).map((w) => ({
+        workouts.map((w) => ({
           ...w,
           hasLogged: loggedIds.has(w.id),
         }))
@@ -155,7 +192,7 @@ export default function AthleteHomeScreen() {
       setLoading(false);
       setRefreshing(false);
     }
-  }, [currentGym?.id, user?.id]);
+  }, [user?.id]);
 
   useEffect(() => {
     fetchData();
@@ -181,7 +218,6 @@ export default function AthleteHomeScreen() {
       {/* Onboarding Modal */}
       <AthleteOnboardingModal
         profile={profile}
-        gymName={currentGym?.name}
         visible={showOnboarding}
         onComplete={handleOnboardingComplete}
       />
@@ -202,220 +238,184 @@ export default function AthleteHomeScreen() {
               {displayName}
             </Text>
           </View>
-          {currentGym && (
-            <Surface style={styles.gymBadge} elevation={1}>
-              <Text variant="labelSmall" style={styles.gymBadgeText}>
-                {currentGym.name}
+        </View>
+
+        {/* Quick Stats */}
+        <View style={styles.statsRow}>
+          <Surface style={styles.statCard} elevation={1}>
+            <Text variant="headlineMedium" style={styles.statValue}>
+              {stats.workoutsThisWeek}
+            </Text>
+            <Text variant="labelSmall" style={styles.statLabel}>
+              This Week
+            </Text>
+          </Surface>
+          <Surface style={[styles.statCard, styles.statCardWarning]} elevation={1}>
+            <Text variant="headlineMedium" style={styles.statValueWarning}>
+              {stats.prsThisMonth}
+            </Text>
+            <Text variant="labelSmall" style={styles.statLabel}>
+              PRs This Month
+            </Text>
+          </Surface>
+          <Surface style={[styles.statCard, styles.statCardSuccess]} elevation={1}>
+            <Text variant="headlineMedium" style={styles.statValueSuccess}>
+              {stats.currentStreak}
+            </Text>
+            <Text variant="labelSmall" style={styles.statLabel}>
+              Day Streak
+            </Text>
+          </Surface>
+        </View>
+
+        {/* Weekly AI Trends */}
+        <WeeklyTrendsCard />
+
+        {/* Today's Workouts */}
+        <View style={styles.section}>
+          <View style={styles.sectionHeader}>
+            <Calendar size={20} color={brandColors.smartBlue.DEFAULT} />
+            <Text variant="titleMedium" style={styles.sectionTitle}>
+              Today's Workouts
+            </Text>
+          </View>
+
+          {todaysWorkouts.length === 0 ? (
+            <Card style={styles.workoutCard} mode="elevated">
+              <Card.Content>
+                <View style={styles.workoutPlaceholder}>
+                  <Dumbbell size={32} color={brandColors.practicalGray.light} />
+                  <Text variant="bodyMedium" style={styles.workoutPlaceholderText}>
+                    No workout scheduled for today
+                  </Text>
+                  <Text variant="bodySmall" style={styles.workoutSubtext}>
+                    {`Create your 8-week program to get started.`}
+                  </Text>
+                  <Button
+                    mode="contained"
+                    onPress={() => router.push("/(athlete)/programs/create")}
+                    style={{ marginTop: 12 }}
+                  >
+                    Create Program
+                  </Button>
+                </View>
+              </Card.Content>
+            </Card>
+          ) : (
+            todaysWorkouts.map((workout) => (
+              <TouchableOpacity
+                key={workout.id}
+                onPress={() => router.push(`/(athlete)/workout/${workout.id}`)}
+              >
+                <Card style={styles.workoutCard} mode="elevated">
+                  <Card.Content>
+                    <View style={styles.workoutRow}>
+                      <View style={styles.workoutInfo}>
+                        <Text variant="titleMedium" style={styles.workoutName}>
+                          {workout.name}
+                        </Text>
+                        <Text variant="bodySmall" style={styles.workoutType}>
+                          {workout.workout_type}
+                        </Text>
+                      </View>
+                      {workout.hasLogged ? (
+                        <Surface style={styles.completedBadge} elevation={0}>
+                          <Text style={styles.completedText}>Completed</Text>
+                        </Surface>
+                      ) : (
+                        <Button mode="contained" compact>
+                          Log Result
+                        </Button>
+                      )}
+                    </View>
+                    {workout.description && (
+                      <Text
+                        variant="bodySmall"
+                        style={styles.workoutDescription}
+                        numberOfLines={2}
+                      >
+                        {workout.description}
+                      </Text>
+                    )}
+                  </Card.Content>
+                </Card>
+              </TouchableOpacity>
+            ))
+          )}
+        </View>
+
+        {/* Recent Activity */}
+        <View style={styles.section}>
+          <View style={styles.sectionHeader}>
+            <Clock size={20} color={brandColors.smartBlue.DEFAULT} />
+            <Text variant="titleMedium" style={styles.sectionTitle}>
+              Recent Activity
+            </Text>
+            <TouchableOpacity onPress={() => router.push("/(athlete)/history")}>
+              <Text style={styles.viewAll}>View All</Text>
+            </TouchableOpacity>
+          </View>
+
+          {recentResults.length === 0 ? (
+            <Surface style={styles.emptyState} elevation={1}>
+              <Text variant="bodyMedium" style={styles.emptyStateText}>
+                No recent activity yet
               </Text>
+              <Text variant="bodySmall" style={styles.emptyStateSubtext}>
+                Complete a workout to see your history here
+              </Text>
+            </Surface>
+          ) : (
+            <Surface style={styles.activityList} elevation={1}>
+              {recentResults.map((result, idx) => (
+                <TouchableOpacity
+                  key={result.id}
+                  onPress={() => router.push(`/(athlete)/workout/${result.workout_id}`)}
+                >
+                  <View
+                    style={[
+                      styles.activityItem,
+                      idx < recentResults.length - 1 && styles.activityItemBorder,
+                    ]}
+                  >
+                    <View style={styles.activityInfo}>
+                      <Text variant="bodyMedium" style={styles.activityName}>
+                        {result.workout?.name || "Workout"}
+                        {result.is_pr && " 🏆"}
+                      </Text>
+                      <Text variant="bodySmall" style={styles.activityDate}>
+                        {new Date(result.created_at).toLocaleDateString()}
+                      </Text>
+                    </View>
+                    <View style={styles.activityResult}>
+                      <Text variant="titleMedium" style={styles.activityValue}>
+                        {result.displayValue}
+                      </Text>
+                      <Text variant="labelSmall" style={styles.activityScale}>
+                        {result.scale.toUpperCase()}
+                      </Text>
+                    </View>
+                  </View>
+                </TouchableOpacity>
+              ))}
             </Surface>
           )}
         </View>
 
-        {!hasGym ? (
-          <Surface style={styles.noGymCard} elevation={2}>
-            <Dumbbell
-              size={48}
-              color={brandColors.practicalGray.light}
-              style={styles.noGymIcon}
-            />
-            <Text variant="titleMedium" style={styles.noGymTitle}>
-              Join a Gym
-            </Text>
-            <Text variant="bodyMedium" style={styles.noGymText}>
-              Get an invite code from your coach to start tracking your workouts.
-            </Text>
-            <Button
-              mode="contained"
-              onPress={() => router.push("/(auth)/join-gym")}
-              style={styles.joinButton}
-            >
-              Enter Invite Code
-            </Button>
-          </Surface>
-        ) : (
-          <>
-            {/* Quick Stats */}
-            <View style={styles.statsRow}>
-              <Surface style={styles.statCard} elevation={1}>
-                <Text variant="headlineMedium" style={styles.statValue}>
-                  {stats.workoutsThisWeek}
-                </Text>
-                <Text variant="labelSmall" style={styles.statLabel}>
-                  This Week
-                </Text>
-              </Surface>
-              <Surface style={[styles.statCard, styles.statCardWarning]} elevation={1}>
-                <Text variant="headlineMedium" style={styles.statValueWarning}>
-                  {stats.prsThisMonth}
-                </Text>
-                <Text variant="labelSmall" style={styles.statLabel}>
-                  PRs This Month
-                </Text>
-              </Surface>
-              <Surface style={[styles.statCard, styles.statCardSuccess]} elevation={1}>
-                <Text variant="headlineMedium" style={styles.statValueSuccess}>
-                  {stats.currentStreak}
-                </Text>
-                <Text variant="labelSmall" style={styles.statLabel}>
-                  Day Streak
-                </Text>
-              </Surface>
-            </View>
-
-            {/* Weekly AI Trends */}
-            <WeeklyTrendsCard />
-
-            {/* Today's Workouts */}
-            <View style={styles.section}>
-              <View style={styles.sectionHeader}>
-                <Calendar size={20} color={brandColors.smartBlue.DEFAULT} />
-                <Text variant="titleMedium" style={styles.sectionTitle}>
-                  Today's Workouts
-                </Text>
-              </View>
-
-              {todaysWorkouts.length === 0 ? (
-                <Card style={styles.workoutCard} mode="elevated">
-                  <Card.Content>
-                    <View style={styles.workoutPlaceholder}>
-                      <Dumbbell size={32} color={brandColors.practicalGray.light} />
-                      <Text variant="bodyMedium" style={styles.workoutPlaceholderText}>
-                        No workout scheduled for today
-                      </Text>
-                      <Text variant="bodySmall" style={styles.workoutSubtext}>
-                        Check back when your coach posts the WOD
-                      </Text>
-                    </View>
-                  </Card.Content>
-                </Card>
-              ) : (
-                todaysWorkouts.map((workout) => (
-                  <TouchableOpacity
-                    key={workout.id}
-                    onPress={() => router.push(`/(athlete)/workout/${workout.id}`)}
-                  >
-                    <Card style={styles.workoutCard} mode="elevated">
-                      <Card.Content>
-                        <View style={styles.workoutRow}>
-                          <View style={styles.workoutInfo}>
-                            <Text variant="titleMedium" style={styles.workoutName}>
-                              {workout.name}
-                            </Text>
-                            <Text variant="bodySmall" style={styles.workoutType}>
-                              {workout.workout_type}
-                            </Text>
-                          </View>
-                          {workout.hasLogged ? (
-                            <Surface style={styles.completedBadge} elevation={0}>
-                              <Text style={styles.completedText}>Completed</Text>
-                            </Surface>
-                          ) : (
-                            <Button mode="contained" compact>
-                              Log Result
-                            </Button>
-                          )}
-                        </View>
-                        {workout.description && (
-                          <Text
-                            variant="bodySmall"
-                            style={styles.workoutDescription}
-                            numberOfLines={2}
-                          >
-                            {workout.description}
-                          </Text>
-                        )}
-                      </Card.Content>
-                    </Card>
-                  </TouchableOpacity>
-                ))
-              )}
-            </View>
-
-            {/* Recent Activity */}
-            <View style={styles.section}>
-              <View style={styles.sectionHeader}>
-                <Clock size={20} color={brandColors.smartBlue.DEFAULT} />
-                <Text variant="titleMedium" style={styles.sectionTitle}>
-                  Recent Activity
-                </Text>
-                <TouchableOpacity onPress={() => router.push("/(athlete)/history")}>
-                  <Text style={styles.viewAll}>View All</Text>
-                </TouchableOpacity>
-              </View>
-
-              {recentResults.length === 0 ? (
-                <Surface style={styles.emptyState} elevation={1}>
-                  <Text variant="bodyMedium" style={styles.emptyStateText}>
-                    No recent activity yet
-                  </Text>
-                  <Text variant="bodySmall" style={styles.emptyStateSubtext}>
-                    Complete a workout to see your history here
-                  </Text>
-                </Surface>
-              ) : (
-                <Surface style={styles.activityList} elevation={1}>
-                  {recentResults.map((result, idx) => (
-                    <TouchableOpacity
-                      key={result.id}
-                      onPress={() => router.push(`/(athlete)/workout/${result.workout_id}`)}
-                    >
-                      <View
-                        style={[
-                          styles.activityItem,
-                          idx < recentResults.length - 1 && styles.activityItemBorder,
-                        ]}
-                      >
-                        <View style={styles.activityInfo}>
-                          <Text variant="bodyMedium" style={styles.activityName}>
-                            {result.workout?.name || "Workout"}
-                            {result.is_pr && " 🏆"}
-                          </Text>
-                          <Text variant="bodySmall" style={styles.activityDate}>
-                            {new Date(result.created_at).toLocaleDateString()}
-                          </Text>
-                        </View>
-                        <View style={styles.activityResult}>
-                          <Text variant="titleMedium" style={styles.activityValue}>
-                            {result.displayValue}
-                          </Text>
-                          <Text variant="labelSmall" style={styles.activityScale}>
-                            {result.scale.toUpperCase()}
-                          </Text>
-                        </View>
-                      </View>
-                    </TouchableOpacity>
-                  ))}
-                </Surface>
-              )}
-            </View>
-
-            {/* Quick Links */}
-            <View style={styles.quickLinks}>
-              <TouchableOpacity
-                style={styles.quickLink}
-                onPress={() => router.push("/(athlete)/leaderboard")}
-              >
-                <Surface style={styles.quickLinkCard} elevation={1}>
-                  <Trophy size={28} color={brandColors.helpfulOrange.DEFAULT} />
-                  <Text variant="labelMedium" style={styles.quickLinkText}>
-                    Leaderboards
-                  </Text>
-                </Surface>
-              </TouchableOpacity>
-              <TouchableOpacity
-                style={styles.quickLink}
-                onPress={() => router.push("/(athlete)/profile")}
-              >
-                <Surface style={styles.quickLinkCard} elevation={1}>
-                  <TrendingUp size={28} color={brandColors.thrivingGreen.DEFAULT} />
-                  <Text variant="labelMedium" style={styles.quickLinkText}>
-                    My PRs
-                  </Text>
-                </Surface>
-              </TouchableOpacity>
-            </View>
-          </>
-        )}
+        {/* Quick Links */}
+        <View style={styles.quickLinks}>
+          <TouchableOpacity
+            style={styles.quickLink}
+            onPress={() => router.push("/(athlete)/profile")}
+          >
+            <Surface style={styles.quickLinkCard} elevation={1}>
+              <TrendingUp size={28} color={brandColors.thrivingGreen.DEFAULT} />
+              <Text variant="labelMedium" style={styles.quickLinkText}>
+                My PRs
+              </Text>
+            </Surface>
+          </TouchableOpacity>
+        </View>
       </ScrollView>
     </SafeAreaView>
   );

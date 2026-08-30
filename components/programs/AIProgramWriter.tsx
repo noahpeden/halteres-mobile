@@ -63,7 +63,7 @@ const defaultFormState: FormState = {
   programType: "linear",
   referenceInput: "",
   daysOfWeek: ["Monday", "Wednesday", "Friday"],
-  numberOfWeeks: 4,
+  numberOfWeeks: 8,
   startDate: "",
   endDate: "",
   gymType: "Crossfit Box",
@@ -743,7 +743,7 @@ export function AIProgramWriter({ programId }: AIProgramWriterProps) {
           startDate={formState.startDate}
           endDate={formState.endDate}
           onDayToggle={handleDayToggle}
-          onWeeksChange={(v) => updateField("numberOfWeeks", v)}
+          onWeeksChange={(_v) => updateField("numberOfWeeks", 8)}
           onStartDateChange={(v) => updateField("startDate", v)}
           onFieldBlur={handleFieldBlur}
         />

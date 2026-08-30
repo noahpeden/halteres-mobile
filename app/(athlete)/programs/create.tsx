@@ -20,6 +20,7 @@ import { AuthContext } from "@/components/providers/AuthProvider";
 import { useClients, useCreateClient } from "@/hooks/useClients";
 import { useCreateProgram } from "@/hooks/usePrograms";
 import { type ProgramInput, programSchema } from "@/lib/validations/program.schema";
+import { supabase } from "@/lib/supabase/client";
 
 /**
  * Creates a program for the current, self-coached athlete.
@@ -46,7 +47,7 @@ export default function CreateProgramScreen() {
     defaultValues: {
       name: "",
       description: "",
-      duration_weeks: 4,
+      duration_weeks: 8,
       client_id: "self",
       gym_id: null,
     },
@@ -63,12 +64,66 @@ export default function CreateProgramScreen() {
     return created.id;
   };
 
+  // Check for an existing active program (today within start/end)
+  const findActiveProgramForUser = async (): Promise<string | null> => {
+    const {
+      data: { user },
+    } = await supabase.auth.getUser();
+    if (!user) return null;
+
+    // Get all of this user's entities (self-coached)
+    const { data: entities } = await supabase
+      .from("entities")
+      .select("id")
+      .eq("user_id", user.id)
+      .is("deleted_at", null);
+    const entityIds = (entities || []).map((e) => e.id);
+    if (entityIds.length === 0) return null;
+
+    const { data: programs } = await supabase
+      .from("programs")
+      .select("id, calendar_data, deleted_at")
+      .in("entity_id", entityIds)
+      .is("deleted_at", null)
+      .order("created_at", { ascending: false });
+
+    if (!programs || programs.length === 0) return null;
+
+    const todayStr = new Date().toISOString().split("T")[0];
+    const today = new Date(todayStr);
+
+    for (const p of programs as any[]) {
+      const cal = p.calendar_data || {};
+      const start = cal.start_date ? new Date(cal.start_date) : null;
+      const end = cal.end_date ? new Date(cal.end_date) : null;
+      if (start && end) {
+        const startD = new Date(start.toISOString().split("T")[0]);
+        const endD = new Date(end.toISOString().split("T")[0]);
+        if (today >= startD && today <= endD) {
+          return p.id as string;
+        }
+      }
+    }
+    return null;
+  };
+
   const onSubmit = async (data: ProgramInput) => {
     try {
       setIsLoading(true);
+      // Enforce single active 8-week block
+      const activeProgramId = await findActiveProgramForUser();
+      if (activeProgramId) {
+        Alert.alert(
+          "Active Program In Progress",
+          "You already have an active 8-week block. Opening it now."
+        );
+        router.replace(`/(athlete)/programs/${activeProgramId}`);
+        return;
+      }
       const selfEntityId = await getOrCreateSelfEntityId();
       const result = await createProgram.mutateAsync({
         ...data,
+        duration_weeks: 8,
         client_id: selfEntityId,
         gym_id: null,
       });
@@ -190,28 +245,13 @@ export default function CreateProgramScreen() {
                 <View style={styles.inputContainer}>
                   <TextInput
                     label="Weeks"
-                    placeholder="4"
-                    value={value?.toString()}
-                    onChangeText={(text) => {
-                      const num = Number.parseInt(text, 10);
-                      if (!Number.isNaN(num)) {
-                        onChange(num);
-                      } else if (text === "") {
-                        onChange(0);
-                      }
-                    }}
-                    onBlur={onBlur}
-                    error={!!errors.duration_weeks}
-                    keyboardType="number-pad"
+                    value="8"
+                    editable={false}
                     mode="outlined"
                     style={styles.input}
-                    right={<TextInput.Affix text="weeks" />}
+                    right={<TextInput.Affix text="fixed" />}
                   />
-                  {errors.duration_weeks ? (
-                    <Text style={styles.errorText}>{errors.duration_weeks?.message}</Text>
-                  ) : (
-                    <Text style={styles.fieldHint}>Maximum 8 weeks</Text>
-                  )}
+                  <Text style={styles.fieldHint}>8 weeks is fixed for this block</Text>
                 </View>
               )}
             />
