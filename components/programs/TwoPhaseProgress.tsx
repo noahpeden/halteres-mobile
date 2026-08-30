@@ -120,7 +120,7 @@ export function TwoPhaseProgress({
       case "enhancing_week":
         return {
           title: "Adding Full Details",
-          subtitle: `Enhancing Week ${enhancementProgress?.weekNumber || ""} with coaching cues and scaling...`,
+          subtitle: `Enhancing Week ${enhancementProgress?.weekNumber || ""} with training cues and scaling...`,
         };
       case "enhancing_all":
         return {
