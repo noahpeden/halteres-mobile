@@ -33,10 +33,9 @@ type Tab = "workout" | "log";
 
 type Workout = {
   id: string;
-  name: string;
-  description: string | null;
+  title: string;
+  body: string | null;
   workout_type: string | null;
-  exercises: any[] | null;
   program: {
     name: string;
   } | null;
@@ -72,8 +71,8 @@ export default function WorkoutDetailScreen() {
 
   // TV Display Mode - Parse sections from workout description
   const sections = useMemo(
-    () => parseWorkoutSections(workout?.description),
-    [workout?.description]
+    () => parseWorkoutSections(workout?.body),
+    [workout?.body]
   );
   const tvDisplay = useTVDisplay(sections);
 
@@ -85,7 +84,7 @@ export default function WorkoutDetailScreen() {
       const { data: workoutData, error: workoutError } = await supabase
         .from("program_workouts")
         .select(`
-          id, name, description, workout_type, exercises,
+          id, title, body, workout_type,
           program:programs (name)
         `)
         .eq("id", id)
@@ -236,7 +235,7 @@ export default function WorkoutDetailScreen() {
           </TouchableOpacity>
           <View style={styles.headerText}>
             <Text variant="titleLarge" style={styles.workoutTitle} numberOfLines={1}>
-              {workout.name}
+              {workout.title}
             </Text>
             <View style={styles.headerMeta}>
               {workout.workout_type && (
@@ -290,8 +289,8 @@ export default function WorkoutDetailScreen() {
               Description
             </Text>
             <View style={styles.descriptionContainer}>
-              {workout.description
-                ? parseMarkdownContent(workout.description)
+              {workout.body
+                ? parseMarkdownContent(workout.body)
                 : <Text variant="bodyMedium" style={styles.description}>No description provided.</Text>
               }
             </View>
@@ -313,40 +312,6 @@ export default function WorkoutDetailScreen() {
               </View>
             )}
           </Surface>
-
-          {/* Exercises */}
-          {workout.exercises && workout.exercises.length > 0 && (
-            <Surface style={styles.card} elevation={1}>
-              <Text variant="titleMedium" style={styles.cardTitle}>
-                Exercises
-              </Text>
-              {workout.exercises.map((exercise: any, idx: number) => (
-                <View key={idx} style={styles.exerciseItem}>
-                  <View style={styles.exerciseIndicator} />
-                  <View style={styles.exerciseContent}>
-                    <Text variant="bodyLarge" style={styles.exerciseName}>
-                      {exercise.name}
-                    </Text>
-                    {exercise.reps && (
-                      <Text variant="bodySmall" style={styles.exerciseDetail}>
-                        {exercise.reps} reps
-                      </Text>
-                    )}
-                    {exercise.weight && (
-                      <Text variant="bodySmall" style={styles.exerciseDetail}>
-                        @ {exercise.weight}
-                      </Text>
-                    )}
-                    {exercise.notes && (
-                      <Text variant="bodySmall" style={styles.exerciseNotes}>
-                        {exercise.notes}
-                      </Text>
-                    )}
-                  </View>
-                </View>
-              ))}
-            </Surface>
-          )}
 
           {/* User's Result */}
           {userResult && (
@@ -419,7 +384,7 @@ export default function WorkoutDetailScreen() {
         <View style={styles.formContainer}>
           <ResultEntryForm
             workoutId={id!}
-            workoutTitle={workout.name}
+            workoutTitle={workout.title}
             onSuccess={handleResultSuccess}
             onCancel={() => setActiveTab("workout")}
             defaultResultType={getDefaultResultType(workout.workout_type) as any}
@@ -433,7 +398,7 @@ export default function WorkoutDetailScreen() {
         currentSection={tvDisplay.currentSection}
         sections={sections}
         currentSectionId={tvDisplay.currentSectionId}
-        workoutTitle={workout?.name || "Workout"}
+        workoutTitle={workout?.title || "Workout"}
         onClose={tvDisplay.close}
         onNext={tvDisplay.goToNext}
         onPrevious={tvDisplay.goToPrevious}
