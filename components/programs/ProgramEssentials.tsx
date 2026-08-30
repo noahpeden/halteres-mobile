@@ -28,10 +28,12 @@ const trainingMethodologies = [
 ];
 
 type ProgramEssentialsProps = {
+  name?: string;
   trainingMethodology: string;
   programType: string;
   description: string;
   referenceInput: string;
+  onNameChange?: (value: string) => void;
   onTrainingMethodologyChange: (value: string) => void;
   onProgramTypeChange: (value: string) => void;
   onDescriptionChange: (value: string) => void;
@@ -41,10 +43,12 @@ type ProgramEssentialsProps = {
 };
 
 export function ProgramEssentials({
+  name,
   trainingMethodology,
   programType,
   description,
   referenceInput,
+  onNameChange,
   onTrainingMethodologyChange,
   onProgramTypeChange,
   onDescriptionChange,
@@ -61,6 +65,7 @@ export function ProgramEssentials({
   const [localDescription, setLocalDescription] = useState(description);
   const [localReferenceInput, setLocalReferenceInput] =
     useState(referenceInput);
+  const [localName, setLocalName] = useState(name || "");
 
   const descriptionTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(
     null,
@@ -68,6 +73,7 @@ export function ProgramEssentials({
   const referenceTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(
     null,
   );
+  const nameTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   // Sync local state with props
   useEffect(() => {
@@ -77,6 +83,9 @@ export function ProgramEssentials({
   useEffect(() => {
     setLocalReferenceInput(referenceInput);
   }, [referenceInput]);
+  useEffect(() => {
+    setLocalName(name || "");
+  }, [name]);
 
   // Cleanup timeouts
   useEffect(() => {
@@ -87,6 +96,26 @@ export function ProgramEssentials({
         clearTimeout(referenceTimeoutRef.current);
     };
   }, []);
+
+  const handleNameChange = useCallback(
+    (text: string) => {
+      setLocalName(text);
+      if (nameTimeoutRef.current) clearTimeout(nameTimeoutRef.current);
+      nameTimeoutRef.current = setTimeout(() => {
+        onNameChange?.(text);
+      }, 300);
+    },
+    [onNameChange],
+  );
+
+  const handleNameBlur = useCallback(() => {
+    if (nameTimeoutRef.current) {
+      clearTimeout(nameTimeoutRef.current);
+      nameTimeoutRef.current = null;
+    }
+    onNameChange?.(localName);
+    onFieldBlur("name");
+  }, [localName, onNameChange, onFieldBlur]);
 
   const handleDescriptionChange = useCallback(
     (text: string) => {
@@ -236,6 +265,22 @@ export function ProgramEssentials({
               />
             ))}
           </Menu>
+        </View>
+
+        {/* Program Name */}
+        <View style={styles.fieldContainer}>
+        <View style={styles.labelRow}>
+            <Text variant="labelLarge">Program Name</Text>
+            <Info size={16} color={theme.colors.primary} />
+          </View>
+          <TextInput
+            mode="outlined"
+            value={localName}
+            onChangeText={handleNameChange}
+            onBlur={handleNameBlur}
+            placeholder="e.g., Strength & Engine Block"
+            style={styles.textArea}
+          />
         </View>
 
         {/* Program Description */}
