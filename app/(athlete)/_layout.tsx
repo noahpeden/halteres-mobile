@@ -1,9 +1,8 @@
-import { Tabs, Redirect } from "expo-router";
+import { Tabs } from "expo-router";
 import {
   Calendar,
   Dumbbell,
   Home,
-  Trophy,
   User,
 } from "lucide-react-native";
 import { Platform, StyleSheet, View, ActivityIndicator } from "react-native";
@@ -11,7 +10,7 @@ import { brandColors } from "@/app/_layout";
 import { useAuth } from "@/hooks/useAuth";
 
 export default function AthleteLayout() {
-  const { isCoach, isLoading, loadingProfile, user } = useAuth();
+  const { isLoading, loadingProfile } = useAuth();
 
   // Show loading while checking auth
   if (isLoading || loadingProfile) {
@@ -20,11 +19,6 @@ export default function AthleteLayout() {
         <ActivityIndicator size="large" color={brandColors.smartBlue.DEFAULT} />
       </View>
     );
-  }
-
-  // Redirect coaches to coach section
-  if (user && isCoach) {
-    return <Redirect href="/(app)/dashboard" />;
   }
 
   return (
@@ -92,24 +86,6 @@ export default function AthleteLayout() {
         }}
       />
       <Tabs.Screen
-        name="leaderboard"
-        options={{
-          title: "Board",
-          tabBarIcon: ({ color, focused }) => (
-            <View
-              style={[
-                styles.iconContainer,
-                focused && {
-                  backgroundColor: brandColors.smartBlue.container,
-                },
-              ]}
-            >
-              <Trophy color={color} size={22} strokeWidth={focused ? 2.5 : 2} />
-            </View>
-          ),
-        }}
-      />
-      <Tabs.Screen
         name="history"
         options={{
           title: "History",
@@ -155,6 +131,13 @@ export default function AthleteLayout() {
       {/* Hide workout detail routes from tab bar */}
       <Tabs.Screen
         name="workout"
+        options={{
+          href: null,
+        }}
+      />
+      {/* Hide change-password from tab bar - accessed via Profile */}
+      <Tabs.Screen
+        name="change-password"
         options={{
           href: null,
         }}

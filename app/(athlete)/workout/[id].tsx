@@ -22,7 +22,6 @@ import { AuthContext } from "@/components/providers/AuthProvider";
 import { brandColors } from "@/app/_layout";
 import { API_BASE } from "@/lib/api/getApiUrl";
 import ResultEntryForm from "@/components/athlete/ResultEntryForm";
-import LeaderboardView from "@/components/athlete/LeaderboardView";
 import PRCelebration from "@/components/athlete/PRCelebration";
 import AIFeedbackCard from "@/components/athlete/AIFeedbackCard";
 import { TemplateFeedbackButton, ResultFeedbackCard } from "@/components/feedback";
@@ -30,7 +29,7 @@ import { SectionButtons, TVDisplayMode, useTVDisplay } from "@/components/tv-dis
 import { parseMarkdownContent } from "@/lib/utils/markdownParser";
 import { parseWorkoutSections } from "@/lib/utils/workoutParser";
 
-type Tab = "workout" | "log" | "leaderboard";
+type Tab = "workout" | "log";
 
 type Workout = {
   id: string;
@@ -61,7 +60,7 @@ type UserResult = {
 export default function WorkoutDetailScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const router = useRouter();
-  const { user, currentGym } = useContext(AuthContext);
+  const { user } = useContext(AuthContext);
 
   const [workout, setWorkout] = useState<Workout | null>(null);
   const [userResult, setUserResult] = useState<UserResult | null>(null);
@@ -185,7 +184,6 @@ export default function WorkoutDetailScreen() {
       // Silently fail - feedback generation is non-critical
     }
 
-    setActiveTab("leaderboard");
   };
 
   if (loading) {
@@ -276,16 +274,6 @@ export default function WorkoutDetailScreen() {
             {userResult ? "Edit Result" : "Log Result"}
           </Text>
         </TouchableOpacity>
-        <TouchableOpacity
-          onPress={() => setActiveTab("leaderboard")}
-          style={[styles.tab, activeTab === "leaderboard" && styles.activeTab]}
-        >
-          <Text
-            style={[styles.tabText, activeTab === "leaderboard" && styles.activeTabText]}
-          >
-            Leaderboard
-          </Text>
-        </TouchableOpacity>
       </View>
 
       {/* Content */}
@@ -309,9 +297,8 @@ export default function WorkoutDetailScreen() {
             </View>
             {/* Template Feedback */}
             <View style={styles.templateFeedbackContainer}>
-              <TemplateFeedbackButton
+            <TemplateFeedbackButton
                 workoutId={id || ""}
-                gymId={currentGym?.id}
                 showStats
               />
             </View>
@@ -407,7 +394,6 @@ export default function WorkoutDetailScreen() {
                 workoutResultId={userResult.id}
                 resultOwnerId={user.id}
                 currentUserId={user.id}
-                gymId={currentGym?.id}
               />
             </View>
           )}
@@ -433,22 +419,10 @@ export default function WorkoutDetailScreen() {
         <View style={styles.formContainer}>
           <ResultEntryForm
             workoutId={id!}
-            gymId={currentGym?.id}
             workoutTitle={workout.name}
             onSuccess={handleResultSuccess}
             onCancel={() => setActiveTab("workout")}
             defaultResultType={getDefaultResultType(workout.workout_type) as any}
-          />
-        </View>
-      )}
-
-      {/* Leaderboard Tab */}
-      {activeTab === "leaderboard" && (
-        <View style={styles.leaderboardContainer}>
-          <LeaderboardView
-            workoutId={id!}
-            gymId={currentGym?.id}
-            workoutTitle={workout.name}
           />
         </View>
       )}
