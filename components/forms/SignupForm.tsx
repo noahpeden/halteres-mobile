@@ -3,10 +3,12 @@ import { router } from "expo-router";
 import { useState } from "react";
 import { Controller, useForm } from "react-hook-form";
 import { Alert, StyleSheet, View } from "react-native";
-import { Button, HelperText, TextInput } from "react-native-paper";
+import { HelperText, TextInput } from "react-native-paper";
 import { z } from "zod";
 import { GoogleSignIn } from "@/components/auth/GoogleSignIn";
+import { HButton } from "@/components/ui/HButton";
 import { useAuth } from "@/hooks/useAuth";
+import { palette } from "@/lib/theme";
 
 const signupSchema = z
   .object({
@@ -33,11 +35,7 @@ export function SignupForm() {
     formState: { errors },
   } = useForm<SignupInput>({
     resolver: zodResolver(signupSchema),
-    defaultValues: {
-      email: "",
-      password: "",
-      confirmPassword: "",
-    },
+    defaultValues: { email: "", password: "", confirmPassword: "" },
   });
 
   const onSubmit = async (data: SignupInput) => {
@@ -45,17 +43,14 @@ export function SignupForm() {
       setIsLoading(true);
       await signUp(data.email, data.password);
       Alert.alert(
-        "Success",
-        "Account created! Please check your email to confirm your account.",
-        [
-          {
-            text: "OK",
-            onPress: () => router.replace("/"),
-          },
-        ],
+        "Check your inbox",
+        "Account created. Confirm the email and you're in.",
+        [{ text: "OK", onPress: () => router.replace("/") }],
       );
-    } catch (error: any) {
-      Alert.alert("Error", error.message || "Failed to create account");
+    } catch (error: unknown) {
+      const message =
+        error instanceof Error ? error.message : "Failed to create account";
+      Alert.alert("Error", message);
     } finally {
       setIsLoading(false);
     }
@@ -67,10 +62,10 @@ export function SignupForm() {
         control={control}
         name="email"
         render={({ field: { onChange, onBlur, value } }) => (
-          <View style={styles.inputContainer}>
+          <View>
             <TextInput
               label="Email"
-              placeholder="email@example.com"
+              placeholder="you@example.com"
               value={value}
               onChangeText={onChange}
               onBlur={onBlur}
@@ -92,10 +87,10 @@ export function SignupForm() {
         control={control}
         name="password"
         render={({ field: { onChange, onBlur, value } }) => (
-          <View style={styles.inputContainer}>
+          <View>
             <TextInput
               label="Password"
-              placeholder="Create a password"
+              placeholder="At least 8 characters"
               value={value}
               onChangeText={onChange}
               onBlur={onBlur}
@@ -116,10 +111,10 @@ export function SignupForm() {
         control={control}
         name="confirmPassword"
         render={({ field: { onChange, onBlur, value } }) => (
-          <View style={styles.inputContainer}>
+          <View>
             <TextInput
-              label="Confirm Password"
-              placeholder="Confirm your password"
+              label="Confirm password"
+              placeholder="Same again"
               value={value}
               onChangeText={onChange}
               onBlur={onBlur}
@@ -136,36 +131,18 @@ export function SignupForm() {
         )}
       />
 
-      <Button
-        mode="contained"
+      <HButton
+        label="Create account"
         onPress={handleSubmit(onSubmit)}
         loading={isLoading}
-        disabled={isLoading}
-        style={styles.button}
-        contentStyle={styles.buttonContent}
-      >
-        Create Account
-      </Button>
-
+        tone="orange"
+      />
       <GoogleSignIn />
     </View>
   );
 }
 
 const styles = StyleSheet.create({
-  container: {
-    gap: 8,
-  },
-  inputContainer: {
-    marginBottom: 8,
-  },
-  input: {
-    backgroundColor: "transparent",
-  },
-  button: {
-    marginTop: 8,
-  },
-  buttonContent: {
-    paddingVertical: 6,
-  },
+  container: { gap: 4 },
+  input: { backgroundColor: palette.paperElevated },
 });

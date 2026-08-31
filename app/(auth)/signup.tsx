@@ -6,93 +6,93 @@ import {
   StyleSheet,
   View,
 } from "react-native";
-import { SafeAreaView } from "react-native-safe-area-context";
-import { Card, Text } from "react-native-paper";
 import { SignupForm } from "@/components/forms/SignupForm";
+import { AppText } from "@/components/ui/AppText";
+import { HaltereMark } from "@/components/ui/HaltereMark";
+import { Screen } from "@/components/ui/Screen";
+import { palette, SUPPORT_EMAIL } from "@/lib/theme";
 
 export default function SignupScreen() {
   return (
-    <SafeAreaView style={styles.container}>
+    <Screen notebook={false} edges={["top", "bottom"]}>
       <KeyboardAvoidingView
         behavior={Platform.OS === "ios" ? "padding" : "height"}
-        style={styles.keyboardView}
+        style={styles.flex}
       >
         <ScrollView
-          style={styles.scrollView}
-          contentContainerStyle={styles.scrollContent}
+          contentContainerStyle={styles.scroll}
+          keyboardShouldPersistTaps="handled"
         >
-          <Card style={styles.card} elevation={2}>
-            <Card.Content style={styles.cardContent}>
-              <View style={styles.header}>
-                <Text variant="headlineMedium" style={styles.title}>
-                  Join HalteresAI
-                </Text>
-                <Text variant="bodyMedium" style={styles.subtitle}>
-                  Access workouts and AI guidance
-                </Text>
-              </View>
+          <View style={styles.hero}>
+            <View style={styles.markHalo}>
+              <HaltereMark size={56} color={palette.orange} />
+            </View>
+            <AppText variant="eyebrow" color={palette.orange}>
+              Halteres
+            </AppText>
+            <AppText variant="display" style={styles.title}>
+              Start writing.
+            </AppText>
+            <AppText variant="italic">
+              Describe how you already train. We'll turn it into a program you
+              can edit and log.
+            </AppText>
+          </View>
 
-              <SignupForm />
+          <View style={styles.form}>
+            <SignupForm />
+          </View>
 
-              <View style={styles.footer}>
-                <Text variant="bodyMedium" style={styles.footerText}>
-                  Already have an account?{" "}
-                </Text>
-                <Link href="/(auth)/login">
-                  <Text style={styles.footerLink}>Sign in</Text>
-                </Link>
-              </View>
-            </Card.Content>
-          </Card>
+          <View style={styles.footer}>
+            <AppText variant="body">Already in?</AppText>
+            <Link href="/(auth)/login">
+              <AppText variant="label" color={palette.blue}>
+                Sign in
+              </AppText>
+            </Link>
+          </View>
+          <AppText variant="bodySmall" style={styles.contact}>
+            {SUPPORT_EMAIL}
+          </AppText>
         </ScrollView>
       </KeyboardAvoidingView>
-    </SafeAreaView>
+    </Screen>
   );
 }
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-  },
-  keyboardView: {
-    flex: 1,
-  },
-  scrollView: {
-    flex: 1,
-  },
-  scrollContent: {
+  flex: { flex: 1 },
+  scroll: {
     flexGrow: 1,
+    paddingHorizontal: 24,
+    paddingTop: 28,
+    paddingBottom: 40,
+  },
+  hero: { marginBottom: 24 },
+  markHalo: {
+    width: 80,
+    height: 80,
+    borderRadius: 28,
+    backgroundColor: palette.orangeWash,
+    alignItems: "center",
     justifyContent: "center",
-    padding: 24,
+    marginBottom: 18,
+    transform: [{ rotate: "6deg" }],
   },
-  card: {
-    borderRadius: 16,
-  },
-  cardContent: {
-    padding: 32,
-  },
-  header: {
-    marginBottom: 24,
-  },
-  title: {
-    textAlign: "center",
-    marginBottom: 8,
-    fontWeight: "700",
-  },
-  subtitle: {
-    textAlign: "center",
+  title: { marginTop: 8, marginBottom: 10 },
+  form: {
+    backgroundColor: palette.paperElevated,
+    borderRadius: 22,
+    padding: 20,
+    borderWidth: 1,
+    borderColor: "rgba(26, 35, 50, 0.05)",
   },
   footer: {
-    marginTop: 24,
     flexDirection: "row",
     justifyContent: "center",
     alignItems: "center",
+    gap: 6,
+    marginTop: 22,
   },
-  footerText: {
-    marginRight: 4,
-  },
-  footerLink: {
-    color: "#3b82f6",
-    fontWeight: "600",
-  },
+  contact: { textAlign: "center", marginTop: 16 },
 });

@@ -1,5 +1,6 @@
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useRouter } from "expo-router";
+import { ArrowLeft, Eye, EyeOff, Lock, Shield } from "lucide-react-native";
 import { useState } from "react";
 import { Controller, useForm } from "react-hook-form";
 import {
@@ -11,7 +12,6 @@ import {
   TouchableOpacity,
   View,
 } from "react-native";
-import { SafeAreaView } from "react-native-safe-area-context";
 import {
   Button,
   HelperText,
@@ -19,10 +19,10 @@ import {
   Text,
   TextInput,
 } from "react-native-paper";
-import { ArrowLeft, Eye, EyeOff, Lock, Shield } from "lucide-react-native";
+import { SafeAreaView } from "react-native-safe-area-context";
 import { z } from "zod";
 import { supabase } from "@/lib/supabase/client";
-import { brandColors } from "@/app/_layout";
+import { palette } from "@/lib/theme";
 
 const changePasswordSchema = z
   .object({
@@ -100,7 +100,7 @@ export default function ChangePasswordScreen() {
             text: "OK",
             onPress: () => router.back(),
           },
-        ]
+        ],
       );
 
       reset();
@@ -117,8 +117,11 @@ export default function ChangePasswordScreen() {
     <SafeAreaView style={styles.container} edges={["top"]}>
       {/* Header */}
       <View style={styles.header}>
-        <TouchableOpacity onPress={() => router.back()} style={styles.backButton}>
-          <ArrowLeft size={24} color={brandColors.practicalGray.DEFAULT} />
+        <TouchableOpacity
+          onPress={() => router.back()}
+          style={styles.backButton}
+        >
+          <ArrowLeft size={24} color={palette.inkFaint} />
         </TouchableOpacity>
         <Text variant="titleLarge" style={styles.headerTitle}>
           Change Password
@@ -138,7 +141,7 @@ export default function ChangePasswordScreen() {
           {/* Info Card */}
           <Surface style={styles.infoCard} elevation={1}>
             <View style={styles.infoIconContainer}>
-              <Shield size={24} color={brandColors.smartBlue.DEFAULT} />
+              <Shield size={24} color={palette.blue} />
             </View>
             <View style={styles.infoContent}>
               <Text variant="titleSmall" style={styles.infoTitle}>
@@ -174,21 +177,21 @@ export default function ChangePasswordScreen() {
                     style={styles.input}
                     left={
                       <TextInput.Icon
-                        icon={() => (
-                          <Lock size={20} color={brandColors.practicalGray.medium} />
-                        )}
+                        icon={() => <Lock size={20} color={palette.inkSoft} />}
                       />
                     }
                     right={
                       <TextInput.Icon
                         icon={() =>
                           showCurrentPassword ? (
-                            <EyeOff size={20} color={brandColors.practicalGray.medium} />
+                            <EyeOff size={20} color={palette.inkSoft} />
                           ) : (
-                            <Eye size={20} color={brandColors.practicalGray.medium} />
+                            <Eye size={20} color={palette.inkSoft} />
                           )
                         }
-                        onPress={() => setShowCurrentPassword(!showCurrentPassword)}
+                        onPress={() =>
+                          setShowCurrentPassword(!showCurrentPassword)
+                        }
                       />
                     }
                   />
@@ -218,18 +221,16 @@ export default function ChangePasswordScreen() {
                     style={styles.input}
                     left={
                       <TextInput.Icon
-                        icon={() => (
-                          <Lock size={20} color={brandColors.practicalGray.medium} />
-                        )}
+                        icon={() => <Lock size={20} color={palette.inkSoft} />}
                       />
                     }
                     right={
                       <TextInput.Icon
                         icon={() =>
                           showNewPassword ? (
-                            <EyeOff size={20} color={brandColors.practicalGray.medium} />
+                            <EyeOff size={20} color={palette.inkSoft} />
                           ) : (
-                            <Eye size={20} color={brandColors.practicalGray.medium} />
+                            <Eye size={20} color={palette.inkSoft} />
                           )
                         }
                         onPress={() => setShowNewPassword(!showNewPassword)}
@@ -262,21 +263,21 @@ export default function ChangePasswordScreen() {
                     style={styles.input}
                     left={
                       <TextInput.Icon
-                        icon={() => (
-                          <Lock size={20} color={brandColors.practicalGray.medium} />
-                        )}
+                        icon={() => <Lock size={20} color={palette.inkSoft} />}
                       />
                     }
                     right={
                       <TextInput.Icon
                         icon={() =>
                           showConfirmPassword ? (
-                            <EyeOff size={20} color={brandColors.practicalGray.medium} />
+                            <EyeOff size={20} color={palette.inkSoft} />
                           ) : (
-                            <Eye size={20} color={brandColors.practicalGray.medium} />
+                            <Eye size={20} color={palette.inkSoft} />
                           )
                         }
-                        onPress={() => setShowConfirmPassword(!showConfirmPassword)}
+                        onPress={() =>
+                          setShowConfirmPassword(!showConfirmPassword)
+                        }
                       />
                     }
                   />
@@ -307,7 +308,7 @@ export default function ChangePasswordScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: "#f8f9fa",
+    backgroundColor: palette.paper,
   },
   header: {
     flexDirection: "row",
@@ -350,7 +351,7 @@ const styles = StyleSheet.create({
     width: 48,
     height: 48,
     borderRadius: 12,
-    backgroundColor: brandColors.smartBlue.container,
+    backgroundColor: palette.blueWash,
     alignItems: "center",
     justifyContent: "center",
     marginRight: 12,
@@ -363,7 +364,7 @@ const styles = StyleSheet.create({
     marginBottom: 4,
   },
   infoText: {
-    color: brandColors.practicalGray.medium,
+    color: palette.inkSoft,
     lineHeight: 20,
   },
   formCard: {

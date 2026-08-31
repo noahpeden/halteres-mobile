@@ -1,59 +1,48 @@
 import { useLocalSearchParams, useRouter } from "expo-router";
 import { ArrowLeft } from "lucide-react-native";
-import { StyleSheet, TouchableOpacity, View } from "react-native";
-import { Text, useTheme } from "react-native-paper";
-import { SafeAreaView } from "react-native-safe-area-context";
+import { Pressable, StyleSheet, View } from "react-native";
 import { AIProgramWriter } from "@/components/programs/AIProgramWriter";
+import { AppText } from "@/components/ui/AppText";
+import { Screen } from "@/components/ui/Screen";
+import { palette } from "@/lib/theme";
 
 export default function ProgramDetailScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const router = useRouter();
-  const theme = useTheme();
 
   return (
-    <SafeAreaView
-      style={[styles.container, { backgroundColor: theme.colors.background }]}
-      edges={["top"]}
-    >
-      {/* Header */}
-      <View
-        style={[styles.header, { borderColor: theme.colors.outlineVariant }]}
-      >
-        <TouchableOpacity
-          onPress={() => router.back()}
-          style={styles.backButton}
-        >
-          <ArrowLeft size={24} color={theme.colors.onSurface} />
-        </TouchableOpacity>
-        <Text variant="headlineSmall" style={styles.headerTitle}>
-          Program Builder
-        </Text>
+    <Screen notebook={false} edges={["top"]}>
+      <View style={styles.header}>
+        <Pressable onPress={() => router.back()} style={styles.back}>
+          <ArrowLeft size={22} color={palette.ink} />
+        </Pressable>
+        <View style={styles.titles}>
+          <AppText variant="eyebrow" color={palette.orange}>
+            Writer
+          </AppText>
+          <AppText variant="title">Generate & edit</AppText>
+        </View>
+        <View style={styles.back} />
       </View>
-
-      {/* AI Program Writer */}
       <AIProgramWriter programId={id as string} />
-    </SafeAreaView>
+    </Screen>
   );
 }
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-  },
   header: {
     flexDirection: "row",
     alignItems: "center",
-    paddingHorizontal: 16,
-    paddingVertical: 12,
+    paddingHorizontal: 12,
+    paddingVertical: 10,
     borderBottomWidth: 1,
+    borderBottomColor: palette.rule,
   },
-  backButton: {
-    marginRight: 16,
-    padding: 4,
-    marginLeft: -4,
+  back: {
+    width: 40,
+    height: 40,
+    alignItems: "center",
+    justifyContent: "center",
   },
-  headerTitle: {
-    fontWeight: "bold",
-    flex: 1,
-  },
+  titles: { flex: 1, alignItems: "center" },
 });

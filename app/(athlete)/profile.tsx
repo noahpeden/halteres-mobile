@@ -1,36 +1,46 @@
-import { useState, useEffect, useContext, useCallback } from "react";
-import { View, StyleSheet, ScrollView, RefreshControl, Modal, Alert } from "react-native";
-import {
-  Text,
-  Surface,
-  Avatar,
-  Button,
-  Divider,
-  List,
-  Chip,
-  SegmentedButtons,
-  ActivityIndicator,
-  TextInput,
-  Portal,
-  IconButton,
-} from "react-native-paper";
-import { SafeAreaView } from "react-native-safe-area-context";
 import { useRouter } from "expo-router";
 import {
-  LogOut,
   ChevronRight,
   Dumbbell,
-  Trophy,
   Edit3,
-  X,
+  LogOut,
   Sparkles,
   Trash2,
+  Trophy,
+  X,
 } from "lucide-react-native";
-import { supabase } from "@/lib/supabase/client";
+import { useCallback, useContext, useEffect, useState } from "react";
+import {
+  Alert,
+  Linking,
+  Modal,
+  RefreshControl,
+  ScrollView,
+  StyleSheet,
+  View,
+} from "react-native";
+import {
+  ActivityIndicator,
+  Avatar,
+  Button,
+  Chip,
+  Divider,
+  IconButton,
+  List,
+  Portal,
+  SegmentedButtons,
+  Surface,
+  Text,
+  TextInput,
+} from "react-native-paper";
+import { SafeAreaView } from "react-native-safe-area-context";
 import { AuthContext } from "@/components/providers/AuthProvider";
-import { brandColors } from "@/app/_layout";
+import { AppText } from "@/components/ui/AppText";
+import { Screen } from "@/components/ui/Screen";
 import { useAthleteProfile } from "@/hooks/useAthleteProfile";
 import { apiClient } from "@/lib/api/client";
+import { supabase } from "@/lib/supabase/client";
+import { palette, SUPPORT_EMAIL, SUPPORT_MAILTO } from "@/lib/theme";
 
 type Tab = "prs" | "metrics";
 
@@ -54,13 +64,8 @@ type Stats = {
 
 export default function ProfileScreen() {
   const router = useRouter();
-  const {
-    user,
-    profile,
-    athleteMetrics,
-    signOut,
-    refetchProfile,
-  } = useContext(AuthContext);
+  const { user, profile, athleteMetrics, signOut, refetchProfile } =
+    useContext(AuthContext);
 
   const { updateProfile, loading: savingProfile } = useAthleteProfile();
 
@@ -172,11 +177,12 @@ export default function ProfileScreen() {
 
   const formatPRValue = (pr: any): string => {
     switch (pr.result_type) {
-      case "time":
+      case "time": {
         if (!pr.time_seconds) return "-";
         const mins = Math.floor(pr.time_seconds / 60);
         const secs = pr.time_seconds % 60;
         return `${mins}:${secs.toString().padStart(2, "0")}`;
+      }
       case "weight":
         return `${pr.weight_kg || 0} kg`;
       case "reps":
@@ -249,7 +255,8 @@ export default function ProfileScreen() {
       ]);
     } catch (e: any) {
       const message =
-        (e && e.message) || "We couldn't delete your account. Please try again.";
+        (e && e.message) ||
+        "We couldn't delete your account. Please try again.";
       setDeleteError(message);
     } finally {
       setDeleteSubmitting(false);
@@ -264,35 +271,42 @@ export default function ProfileScreen() {
   };
 
   // Group PRs by category
-  const prsByCategory = prs.reduce((acc: Record<string, PersonalRecord[]>, pr) => {
-    const category = pr.category || "Other";
-    if (!acc[category]) {
-      acc[category] = [];
-    }
-    acc[category].push(pr);
-    return acc;
-  }, {});
+  const prsByCategory = prs.reduce(
+    (acc: Record<string, PersonalRecord[]>, pr) => {
+      const category = pr.category || "Other";
+      if (!acc[category]) {
+        acc[category] = [];
+      }
+      acc[category].push(pr);
+      return acc;
+    },
+    {},
+  );
 
   if (loading) {
     return (
-      <SafeAreaView style={styles.container} edges={["top"]}>
+      <Screen>
         <View style={styles.loadingContainer}>
-          <ActivityIndicator size="large" color={brandColors.smartBlue.DEFAULT} />
+          <ActivityIndicator size="large" color={palette.blue} />
         </View>
-      </SafeAreaView>
+      </Screen>
     );
   }
 
   return (
-    <SafeAreaView style={styles.container} edges={["top"]}>
+    <Screen>
       <ScrollView
         contentContainerStyle={styles.scrollContent}
         refreshControl={
-          <RefreshControl refreshing={refreshing} onRefresh={handleRefresh} />
+          <RefreshControl
+            refreshing={refreshing}
+            onRefresh={handleRefresh}
+            tintColor={palette.blue}
+          />
         }
       >
-        {/* Profile Header */}
-        <Surface style={styles.headerCard} elevation={2}>
+        <AppText variant="eyebrow">You</AppText>
+        <View style={styles.headerCard}>
           <View style={styles.headerContent}>
             {profile?.profile_photo_url ? (
               <Avatar.Image
@@ -300,23 +314,14 @@ export default function ProfileScreen() {
                 source={{ uri: profile.profile_photo_url }}
               />
             ) : (
-              <Avatar.Text
-                size={80}
-                label={initials}
-                style={styles.avatar}
-              />
+              <Avatar.Text size={80} label={initials} style={styles.avatar} />
             )}
             <View style={styles.headerText}>
-              <Text variant="headlineSmall" style={styles.name}>
-                {displayName}
-              </Text>
-              <Text variant="bodyMedium" style={styles.email}>
-                {user?.email}
-              </Text>
-              {/* Gym chip removed - gym context not provided */}
+              <AppText variant="headline">{displayName}</AppText>
+              <AppText variant="body">{user?.email}</AppText>
             </View>
           </View>
-        </Surface>
+        </View>
 
         {/* Stats Cards */}
         <View style={styles.statsRow}>
@@ -328,8 +333,14 @@ export default function ProfileScreen() {
               Workouts
             </Text>
           </Surface>
-          <Surface style={[styles.statCard, styles.statCardMiddle]} elevation={1}>
-            <Text variant="displaySmall" style={[styles.statValue, styles.prStatValue]}>
+          <Surface
+            style={[styles.statCard, styles.statCardMiddle]}
+            elevation={1}
+          >
+            <Text
+              variant="displaySmall"
+              style={[styles.statValue, styles.prStatValue]}
+            >
               {prs.length}
             </Text>
             <Text variant="labelSmall" style={styles.statLabel}>
@@ -337,7 +348,10 @@ export default function ProfileScreen() {
             </Text>
           </Surface>
           <Surface style={styles.statCard} elevation={1}>
-            <Text variant="titleMedium" style={[styles.statValue, styles.memberSinceValue]}>
+            <Text
+              variant="titleMedium"
+              style={[styles.statValue, styles.memberSinceValue]}
+            >
               {stats?.memberSince || "-"}
             </Text>
             <Text variant="labelSmall" style={styles.statLabel}>
@@ -362,12 +376,12 @@ export default function ProfileScreen() {
           <View style={styles.tabContent}>
             {prs.length === 0 ? (
               <Surface style={styles.emptyCard} elevation={1}>
-                <Trophy size={48} color={brandColors.practicalGray.light} />
+                <Trophy size={48} color={palette.inkFaint} />
                 <Text variant="titleMedium" style={styles.emptyTitle}>
-                  No PRs recorded yet
+                  No marks in the book yet
                 </Text>
                 <Text variant="bodySmall" style={styles.emptyText}>
-                  Log workouts to start tracking your personal records!
+                  Log a result and we'll keep the best.
                 </Text>
               </Surface>
             ) : (
@@ -411,22 +425,37 @@ export default function ProfileScreen() {
             <Surface style={styles.metricsCard} elevation={1}>
               <View style={styles.metricsSectionHeader}>
                 <View style={styles.metricsTitleRow}>
-                  <Dumbbell size={18} color={brandColors.smartBlue.DEFAULT} />
+                  <Dumbbell size={18} color={palette.blue} />
                   <Text variant="titleMedium" style={styles.metricsTitle}>
                     Strength Metrics
                   </Text>
                 </View>
                 <IconButton
-                  icon={() => <Edit3 size={18} color={brandColors.smartBlue.DEFAULT} />}
+                  icon={() => <Edit3 size={18} color={palette.blue} />}
                   onPress={handleEditProfile}
                   size={20}
                 />
               </View>
               <View style={styles.metricsGrid}>
-                <MetricItem label="Back Squat 1RM" value={athleteMetrics?.squat_1rm} unit="kg" />
-                <MetricItem label="Deadlift 1RM" value={athleteMetrics?.deadlift_1rm} unit="kg" />
-                <MetricItem label="Bench Press 1RM" value={athleteMetrics?.bench_1rm} unit="kg" />
-                <MetricItem label="Mile Time" value={athleteMetrics?.mile_time} />
+                <MetricItem
+                  label="Back Squat 1RM"
+                  value={athleteMetrics?.squat_1rm}
+                  unit="kg"
+                />
+                <MetricItem
+                  label="Deadlift 1RM"
+                  value={athleteMetrics?.deadlift_1rm}
+                  unit="kg"
+                />
+                <MetricItem
+                  label="Bench Press 1RM"
+                  value={athleteMetrics?.bench_1rm}
+                  unit="kg"
+                />
+                <MetricItem
+                  label="Mile Time"
+                  value={athleteMetrics?.mile_time}
+                />
               </View>
             </Surface>
 
@@ -438,14 +467,22 @@ export default function ProfileScreen() {
                 </Text>
               </View>
               <View style={styles.metricsGrid}>
-                <MetricItem label="Weight" value={athleteMetrics?.weight_kg} unit="kg" />
-                <MetricItem label="Height" value={athleteMetrics?.height_cm} unit="cm" />
+                <MetricItem
+                  label="Weight"
+                  value={athleteMetrics?.weight_kg}
+                  unit="kg"
+                />
+                <MetricItem
+                  label="Height"
+                  value={athleteMetrics?.height_cm}
+                  unit="cm"
+                />
               </View>
             </Surface>
 
             <Button
               mode="outlined"
-              icon={() => <Edit3 size={16} color={brandColors.smartBlue.DEFAULT} />}
+              icon={() => <Edit3 size={16} color={palette.blue} />}
               onPress={handleEditProfile}
               style={styles.editButton}
             >
@@ -459,11 +496,11 @@ export default function ProfileScreen() {
         {/* AI Insights Quick Link */}
         <Surface style={styles.insightsCard} elevation={1}>
           <List.Item
-            title="AI Insights"
-            description="Get personalized feedback on your training"
+            title="Notes from the writer"
+            description="How the last sessions actually felt"
             left={() => (
               <View style={styles.insightsIcon}>
-                <Sparkles size={24} color={brandColors.helpfulOrange.DEFAULT} />
+                <Sparkles size={24} color={palette.orange} />
               </View>
             )}
             right={() => <ChevronRight size={20} color="#666" />}
@@ -490,7 +527,8 @@ export default function ProfileScreen() {
             Delete Account
           </Text>
           <Text variant="bodySmall" style={styles.dangerText}>
-            Permanently delete your account and data. This action cannot be undone.
+            Permanently delete your account and data. This action cannot be
+            undone.
           </Text>
           <Button
             mode="contained"
@@ -508,11 +546,19 @@ export default function ProfileScreen() {
           mode="outlined"
           onPress={handleSignOut}
           style={styles.signOutButton}
-          textColor="#d32f2f"
-          icon={() => <LogOut size={18} color="#d32f2f" />}
+          textColor={palette.error}
+          icon={() => <LogOut size={18} color={palette.error} />}
         >
-          Sign Out
+          Sign out
         </Button>
+
+        <AppText
+          variant="bodySmall"
+          style={styles.contact}
+          onPress={() => Linking.openURL(SUPPORT_MAILTO)}
+        >
+          Questions? {SUPPORT_EMAIL}
+        </AppText>
       </ScrollView>
 
       {/* Edit Profile Modal */}
@@ -534,11 +580,16 @@ export default function ProfileScreen() {
               />
             </View>
 
-            <ScrollView style={styles.modalContent} showsVerticalScrollIndicator={false}>
+            <ScrollView
+              style={styles.modalContent}
+              showsVerticalScrollIndicator={false}
+            >
               <TextInput
                 label="Display Name"
                 value={editData.display_name}
-                onChangeText={(text) => setEditData({ ...editData, display_name: text })}
+                onChangeText={(text) =>
+                  setEditData({ ...editData, display_name: text })
+                }
                 mode="outlined"
                 style={styles.modalInput}
               />
@@ -551,7 +602,9 @@ export default function ProfileScreen() {
                 <TextInput
                   label="Squat 1RM (kg)"
                   value={editData.squat_1rm}
-                  onChangeText={(text) => setEditData({ ...editData, squat_1rm: text })}
+                  onChangeText={(text) =>
+                    setEditData({ ...editData, squat_1rm: text })
+                  }
                   mode="outlined"
                   keyboardType="numeric"
                   style={styles.modalInputHalf}
@@ -559,7 +612,9 @@ export default function ProfileScreen() {
                 <TextInput
                   label="Deadlift 1RM (kg)"
                   value={editData.deadlift_1rm}
-                  onChangeText={(text) => setEditData({ ...editData, deadlift_1rm: text })}
+                  onChangeText={(text) =>
+                    setEditData({ ...editData, deadlift_1rm: text })
+                  }
                   mode="outlined"
                   keyboardType="numeric"
                   style={styles.modalInputHalf}
@@ -570,7 +625,9 @@ export default function ProfileScreen() {
                 <TextInput
                   label="Bench 1RM (kg)"
                   value={editData.bench_1rm}
-                  onChangeText={(text) => setEditData({ ...editData, bench_1rm: text })}
+                  onChangeText={(text) =>
+                    setEditData({ ...editData, bench_1rm: text })
+                  }
                   mode="outlined"
                   keyboardType="numeric"
                   style={styles.modalInputHalf}
@@ -578,7 +635,9 @@ export default function ProfileScreen() {
                 <TextInput
                   label="Mile Time"
                   value={editData.mile_time}
-                  onChangeText={(text) => setEditData({ ...editData, mile_time: text })}
+                  onChangeText={(text) =>
+                    setEditData({ ...editData, mile_time: text })
+                  }
                   mode="outlined"
                   placeholder="e.g. 7:30"
                   style={styles.modalInputHalf}
@@ -593,7 +652,9 @@ export default function ProfileScreen() {
                 <TextInput
                   label="Weight (kg)"
                   value={editData.weight_kg}
-                  onChangeText={(text) => setEditData({ ...editData, weight_kg: text })}
+                  onChangeText={(text) =>
+                    setEditData({ ...editData, weight_kg: text })
+                  }
                   mode="outlined"
                   keyboardType="numeric"
                   style={styles.modalInputHalf}
@@ -601,7 +662,9 @@ export default function ProfileScreen() {
                 <TextInput
                   label="Height (cm)"
                   value={editData.height_cm}
-                  onChangeText={(text) => setEditData({ ...editData, height_cm: text })}
+                  onChangeText={(text) =>
+                    setEditData({ ...editData, height_cm: text })
+                  }
                   mode="outlined"
                   keyboardType="numeric"
                   style={styles.modalInputHalf}
@@ -647,10 +710,13 @@ export default function ProfileScreen() {
               />
             </View>
 
-            <ScrollView style={styles.modalContent} showsVerticalScrollIndicator={false}>
+            <ScrollView
+              style={styles.modalContent}
+              showsVerticalScrollIndicator={false}
+            >
               <Text style={styles.dangerBody}>
-                This will permanently delete your account and associated data. This action
-                cannot be undone.
+                This will permanently delete your account and associated data.
+                This action cannot be undone.
               </Text>
               <Text style={styles.confirmLabel}>Type DELETE to confirm:</Text>
               <TextInput
@@ -661,7 +727,9 @@ export default function ProfileScreen() {
                 autoCapitalize="characters"
                 style={styles.deleteInput}
               />
-              {!!deleteError && <Text style={styles.deleteError}>{deleteError}</Text>}
+              {!!deleteError && (
+                <Text style={styles.deleteError}>{deleteError}</Text>
+              )}
             </ScrollView>
 
             <View style={styles.modalFooter}>
@@ -688,11 +756,19 @@ export default function ProfileScreen() {
           </SafeAreaView>
         </Modal>
       </Portal>
-    </SafeAreaView>
+    </Screen>
   );
 }
 
-function MetricItem({ label, value, unit }: { label: string; value: any; unit?: string }) {
+function MetricItem({
+  label,
+  value,
+  unit,
+}: {
+  label: string;
+  value: any;
+  unit?: string;
+}) {
   return (
     <View style={styles.metricItem}>
       <Text variant="bodySmall" style={styles.metricLabel}>
@@ -708,7 +784,12 @@ function MetricItem({ label, value, unit }: { label: string; value: any; unit?: 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: "#f8f9fa",
+    backgroundColor: palette.paper,
+  },
+  contact: {
+    textAlign: "center",
+    marginTop: 20,
+    marginBottom: 8,
   },
   loadingContainer: {
     flex: 1,
@@ -716,13 +797,16 @@ const styles = StyleSheet.create({
     alignItems: "center",
   },
   scrollContent: {
-    padding: 16,
-    paddingBottom: 32,
+    padding: 22,
+    paddingBottom: 120,
   },
   headerCard: {
-    borderRadius: 16,
-    backgroundColor: brandColors.smartBlue.DEFAULT,
+    borderRadius: 22,
+    backgroundColor: palette.paperElevated,
     marginBottom: 12,
+    marginTop: 10,
+    borderWidth: 1,
+    borderColor: "rgba(26, 35, 50, 0.05)",
   },
   headerContent: {
     flexDirection: "row",
@@ -730,7 +814,7 @@ const styles = StyleSheet.create({
     padding: 20,
   },
   avatar: {
-    backgroundColor: "#fff",
+    backgroundColor: palette.blueWash,
   },
   headerText: {
     marginLeft: 16,
@@ -738,10 +822,10 @@ const styles = StyleSheet.create({
   },
   name: {
     fontWeight: "bold",
-    color: "#fff",
+    color: palette.ink,
   },
   email: {
-    color: "rgba(255,255,255,0.8)",
+    color: palette.inkSoft,
     marginTop: 2,
   },
   gymChip: {
@@ -769,13 +853,13 @@ const styles = StyleSheet.create({
   },
   statValue: {
     fontWeight: "bold",
-    color: brandColors.smartBlue.DEFAULT,
+    color: palette.blue,
   },
   prStatValue: {
-    color: brandColors.helpfulOrange.DEFAULT,
+    color: palette.orange,
   },
   memberSinceValue: {
-    color: brandColors.thrivingGreen.DEFAULT,
+    color: palette.green,
   },
   statLabel: {
     opacity: 0.6,
@@ -893,7 +977,7 @@ const styles = StyleSheet.create({
     width: 44,
     height: 44,
     borderRadius: 12,
-    backgroundColor: brandColors.helpfulOrange.container,
+    backgroundColor: palette.orangeWash,
     alignItems: "center",
     justifyContent: "center",
     marginLeft: 8,

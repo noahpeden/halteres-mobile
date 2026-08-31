@@ -10,10 +10,13 @@ import {
   StyleSheet,
   View,
 } from "react-native";
-import { SafeAreaView } from "react-native-safe-area-context";
-import { Button, HelperText, Text, TextInput } from "react-native-paper";
+import { HelperText, TextInput } from "react-native-paper";
 import { z } from "zod";
+import { AppText } from "@/components/ui/AppText";
+import { HButton } from "@/components/ui/HButton";
+import { Screen } from "@/components/ui/Screen";
 import { supabase } from "@/lib/supabase/client";
+import { palette } from "@/lib/theme";
 
 const resetSchema = z.object({
   email: z.string().email("Invalid email address"),
@@ -30,9 +33,7 @@ export default function ResetPasswordScreen() {
     formState: { errors },
   } = useForm<ResetInput>({
     resolver: zodResolver(resetSchema),
-    defaultValues: {
-      email: "",
-    },
+    defaultValues: { email: "" },
   });
 
   const onSubmit = async (data: ResetInput) => {
@@ -41,60 +42,53 @@ export default function ResetPasswordScreen() {
       const { error } = await supabase.auth.resetPasswordForEmail(data.email, {
         redirectTo: "https://halteres.ai/auth/callback?reset=true",
       });
-
-      if (error) {
-        throw error;
-      }
-
+      if (error) throw error;
       Alert.alert(
         "Check your email",
         "We sent you a link to reset your password.",
-        [
-          {
-            text: "OK",
-            onPress: () => router.replace("/(auth)/login"),
-          },
-        ],
+        [{ text: "OK", onPress: () => router.replace("/(auth)/login") }],
       );
     } catch (error) {
-      const errorMessage =
+      Alert.alert(
+        "Error",
         error instanceof Error
           ? error.message
-          : "Failed to send password reset email";
-      Alert.alert("Error", errorMessage);
+          : "Failed to send password reset email",
+      );
     } finally {
       setIsLoading(false);
     }
   };
 
   return (
-    <SafeAreaView style={styles.container}>
+    <Screen notebook={false} edges={["top", "bottom"]}>
       <KeyboardAvoidingView
         behavior={Platform.OS === "ios" ? "padding" : "height"}
-        style={styles.keyboardView}
+        style={styles.flex}
       >
         <ScrollView
-          style={styles.scrollView}
-          contentContainerStyle={styles.scrollContent}
+          contentContainerStyle={styles.scroll}
+          keyboardShouldPersistTaps="handled"
         >
-          <View style={styles.header}>
-            <Text variant="headlineMedium" style={styles.title}>
-              Reset password
-            </Text>
-            <Text variant="bodyMedium" style={styles.subtitle}>
-              Enter your email to receive a reset link
-            </Text>
-          </View>
+          <AppText variant="eyebrow" color={palette.blue}>
+            Account
+          </AppText>
+          <AppText variant="display" style={styles.title}>
+            Reset the lock.
+          </AppText>
+          <AppText variant="italic" style={styles.sub}>
+            We'll email a link. Same inbox you signed up with.
+          </AppText>
 
           <View style={styles.form}>
             <Controller
               control={control}
               name="email"
               render={({ field: { onChange, onBlur, value } }) => (
-                <View style={styles.inputContainer}>
+                <View>
                   <TextInput
                     label="Email"
-                    placeholder="email@example.com"
+                    placeholder="you@example.com"
                     value={value}
                     onChangeText={onChange}
                     onBlur={onBlur}
@@ -111,64 +105,34 @@ export default function ResetPasswordScreen() {
                 </View>
               )}
             />
-
-            <Button
-              mode="contained"
+            <HButton
+              label="Send reset link"
               onPress={handleSubmit(onSubmit)}
               loading={isLoading}
-              disabled={isLoading}
-              style={styles.button}
-              contentStyle={styles.buttonContent}
-            >
-              Send reset link
-            </Button>
+              tone="ink"
+            />
+            <HButton
+              label="Back to sign in"
+              onPress={() => router.replace("/(auth)/login")}
+              tone="ghost"
+            />
           </View>
         </ScrollView>
       </KeyboardAvoidingView>
-    </SafeAreaView>
+    </Screen>
   );
 }
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: "#f1f5f9",
-  },
-  keyboardView: {
-    flex: 1,
-  },
-  scrollView: {
-    flex: 1,
-  },
-  scrollContent: {
+  flex: { flex: 1 },
+  scroll: {
     flexGrow: 1,
     justifyContent: "center",
-    padding: 24,
+    paddingHorizontal: 24,
+    paddingVertical: 40,
   },
-  header: {
-    marginBottom: 24,
-  },
-  title: {
-    textAlign: "center",
-    marginBottom: 8,
-    fontWeight: "700",
-  },
-  subtitle: {
-    textAlign: "center",
-  },
-  form: {
-    marginTop: 8,
-  },
-  inputContainer: {
-    marginBottom: 8,
-  },
-  input: {
-    backgroundColor: "transparent",
-  },
-  button: {
-    marginTop: 8,
-  },
-  buttonContent: {
-    paddingVertical: 6,
-  },
+  title: { marginTop: 10, marginBottom: 8 },
+  sub: { marginBottom: 24 },
+  form: { gap: 12 },
+  input: { backgroundColor: palette.paperElevated },
 });

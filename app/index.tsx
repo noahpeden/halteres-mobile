@@ -8,8 +8,15 @@ export default function Index() {
   // Show loading while checking auth and profile
   if (isLoading || loadingProfile) {
     return (
-      <View style={{ flex: 1, alignItems: "center", justifyContent: "center", backgroundColor: "#f9fbff" }}>
-        <ActivityIndicator size="large" color="#1771dc" />
+      <View
+        style={{
+          flex: 1,
+          alignItems: "center",
+          justifyContent: "center",
+          backgroundColor: "#F4EFE6",
+        }}
+      >
+        <ActivityIndicator size="large" color="#1771DC" />
       </View>
     );
   }

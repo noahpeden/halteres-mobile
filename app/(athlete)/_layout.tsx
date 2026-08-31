@@ -1,157 +1,42 @@
 import { Tabs } from "expo-router";
-import {
-  Calendar,
-  Dumbbell,
-  Home,
-  User,
-} from "lucide-react-native";
-import { Platform, StyleSheet, View, ActivityIndicator } from "react-native";
-import { brandColors } from "@/app/_layout";
+import { ActivityIndicator, View } from "react-native";
+import { AthleteTabBar } from "@/components/navigation/AthleteTabBar";
 import { useAuth } from "@/hooks/useAuth";
+import { palette } from "@/lib/theme";
 
 export default function AthleteLayout() {
   const { isLoading, loadingProfile } = useAuth();
 
-  // Show loading while checking auth
   if (isLoading || loadingProfile) {
     return (
-      <View style={{ flex: 1, justifyContent: "center", alignItems: "center" }}>
-        <ActivityIndicator size="large" color={brandColors.smartBlue.DEFAULT} />
+      <View
+        style={{
+          flex: 1,
+          justifyContent: "center",
+          alignItems: "center",
+          backgroundColor: palette.paper,
+        }}
+      >
+        <ActivityIndicator size="large" color={palette.blue} />
       </View>
     );
   }
 
   return (
     <Tabs
+      tabBar={(props) => <AthleteTabBar {...props} />}
       screenOptions={{
         headerShown: false,
-        tabBarStyle: {
-          backgroundColor: "#ffffff",
-          borderTopWidth: 0,
-          height: Platform.OS === "ios" ? 88 : 68,
-          paddingBottom: Platform.OS === "ios" ? 28 : 12,
-          paddingTop: 12,
-          shadowColor: "#000",
-          shadowOffset: { width: 0, height: -4 },
-          shadowOpacity: 0.08,
-          shadowRadius: 12,
-          elevation: 12,
-        },
-        tabBarActiveTintColor: brandColors.smartBlue.DEFAULT,
-        tabBarInactiveTintColor: brandColors.practicalGray.light,
-        tabBarLabelStyle: {
-          fontSize: 11,
-          fontWeight: "600",
-          marginTop: 4,
-        },
-        tabBarItemStyle: {
-          paddingVertical: 4,
-        },
+        tabBarStyle: { position: "absolute" },
       }}
     >
-      <Tabs.Screen
-        name="home"
-        options={{
-          title: "Today",
-          tabBarIcon: ({ color, focused }) => (
-            <View
-              style={[
-                styles.iconContainer,
-                focused && {
-                  backgroundColor: brandColors.smartBlue.container,
-                },
-              ]}
-            >
-              <Home color={color} size={22} strokeWidth={focused ? 2.5 : 2} />
-            </View>
-          ),
-        }}
-      />
-      <Tabs.Screen
-        name="programs"
-        options={{
-          title: "Programs",
-          tabBarIcon: ({ color, focused }) => (
-            <View
-              style={[
-                styles.iconContainer,
-                focused && {
-                  backgroundColor: brandColors.smartBlue.container,
-                },
-              ]}
-            >
-              <Dumbbell color={color} size={22} strokeWidth={focused ? 2.5 : 2} />
-            </View>
-          ),
-        }}
-      />
-      <Tabs.Screen
-        name="history"
-        options={{
-          title: "History",
-          tabBarIcon: ({ color, focused }) => (
-            <View
-              style={[
-                styles.iconContainer,
-                focused && {
-                  backgroundColor: brandColors.smartBlue.container,
-                },
-              ]}
-            >
-              <Calendar color={color} size={22} strokeWidth={focused ? 2.5 : 2} />
-            </View>
-          ),
-        }}
-      />
-      <Tabs.Screen
-        name="profile"
-        options={{
-          title: "Profile",
-          tabBarIcon: ({ color, focused }) => (
-            <View
-              style={[
-                styles.iconContainer,
-                focused && {
-                  backgroundColor: brandColors.smartBlue.container,
-                },
-              ]}
-            >
-              <User color={color} size={22} strokeWidth={focused ? 2.5 : 2} />
-            </View>
-          ),
-        }}
-      />
-      {/* Hide feedback/insights from tab bar - accessed via Profile */}
-      <Tabs.Screen
-        name="feedback"
-        options={{
-          href: null,
-        }}
-      />
-      {/* Hide workout detail routes from tab bar */}
-      <Tabs.Screen
-        name="workout"
-        options={{
-          href: null,
-        }}
-      />
-      {/* Hide change-password from tab bar - accessed via Profile */}
-      <Tabs.Screen
-        name="change-password"
-        options={{
-          href: null,
-        }}
-      />
+      <Tabs.Screen name="home" options={{ title: "Today" }} />
+      <Tabs.Screen name="programs" options={{ title: "Write" }} />
+      <Tabs.Screen name="history" options={{ title: "Log" }} />
+      <Tabs.Screen name="profile" options={{ title: "You" }} />
+      <Tabs.Screen name="feedback" options={{ href: null }} />
+      <Tabs.Screen name="workout" options={{ href: null }} />
+      <Tabs.Screen name="change-password" options={{ href: null }} />
     </Tabs>
   );
 }
-
-const styles = StyleSheet.create({
-  iconContainer: {
-    width: 40,
-    height: 32,
-    borderRadius: 16,
-    alignItems: "center",
-    justifyContent: "center",
-  },
-});

@@ -1,15 +1,15 @@
-import { useState, useEffect, useContext } from "react";
-import { View, StyleSheet, TouchableOpacity } from "react-native";
+import { useContext, useEffect, useState } from "react";
+import { StyleSheet, TouchableOpacity, View } from "react-native";
 import {
-  Text,
-  Surface,
-  Button,
   ActivityIndicator,
+  Button,
   List,
+  Surface,
+  Text,
 } from "react-native-paper";
 import { AuthContext } from "@/components/providers/AuthProvider";
-import { brandColors } from "@/app/_layout";
 import { API_BASE } from "@/lib/api/getApiUrl";
+import { palette } from "@/lib/theme";
 
 type Feedback = {
   id: string;
@@ -26,7 +26,10 @@ type Props = {
   autoGenerate?: boolean;
 };
 
-export default function AIFeedbackCard({ workoutResultId, autoGenerate = false }: Props) {
+export default function AIFeedbackCard({
+  workoutResultId,
+  autoGenerate = false,
+}: Props) {
   const { user } = useContext(AuthContext);
   const [feedback, setFeedback] = useState<Feedback | null>(null);
   const [loading, setLoading] = useState(false);
@@ -48,7 +51,7 @@ export default function AIFeedbackCard({ workoutResultId, autoGenerate = false }
 
     try {
       const response = await fetch(
-        `${API_BASE}/api/ai-feedback?workoutResultId=${workoutResultId}&userId=${user.id}`
+        `${API_BASE}/api/ai-feedback?workoutResultId=${workoutResultId}&userId=${user.id}`,
       );
       const data = await response.json();
       if (data.feedback) {
@@ -116,7 +119,7 @@ export default function AIFeedbackCard({ workoutResultId, autoGenerate = false }
   if (loading) {
     return (
       <Surface style={[styles.card, styles.loadingCard]} elevation={1}>
-        <ActivityIndicator size="large" color={brandColors.smartBlue.DEFAULT} />
+        <ActivityIndicator size="large" color={palette.blue} />
         <Text variant="bodyMedium" style={styles.loadingText}>
           Analyzing your workout...
         </Text>
@@ -275,7 +278,7 @@ const styles = StyleSheet.create({
     borderRadius: 12,
     backgroundColor: "#f0f9ff",
     borderWidth: 1,
-    borderColor: brandColors.smartBlue.DEFAULT + "30",
+    borderColor: palette.blue + "30",
   },
   header: {
     flexDirection: "row",
@@ -338,15 +341,15 @@ const styles = StyleSheet.create({
     marginRight: 6,
   },
   strengthsTitle: {
-    color: brandColors.thrivingGreen.DEFAULT,
+    color: palette.green,
     fontWeight: "600",
   },
   improvementTitle: {
-    color: brandColors.helpfulOrange.DEFAULT,
+    color: palette.orange,
     fontWeight: "600",
   },
   recoveryTitle: {
-    color: brandColors.smartBlue.DEFAULT,
+    color: palette.blue,
     fontWeight: "600",
   },
   nextTitle: {
@@ -360,16 +363,16 @@ const styles = StyleSheet.create({
     paddingLeft: 4,
   },
   checkMark: {
-    color: brandColors.thrivingGreen.DEFAULT,
+    color: palette.green,
     marginRight: 8,
     fontWeight: "bold",
   },
   arrow: {
-    color: brandColors.helpfulOrange.DEFAULT,
+    color: palette.orange,
     marginRight: 8,
   },
   bullet: {
-    color: brandColors.smartBlue.DEFAULT,
+    color: palette.blue,
     marginRight: 8,
   },
   listText: {
@@ -377,7 +380,7 @@ const styles = StyleSheet.create({
     lineHeight: 20,
   },
   expandHint: {
-    color: brandColors.smartBlue.DEFAULT,
+    color: palette.blue,
     marginTop: 8,
   },
 });

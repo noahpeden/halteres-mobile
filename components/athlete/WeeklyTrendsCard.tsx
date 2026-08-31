@@ -1,10 +1,17 @@
-import { useState, useEffect, useContext } from "react";
-import { View, StyleSheet, TouchableOpacity } from "react-native";
-import { Text, Surface, ActivityIndicator } from "react-native-paper";
-import { ChevronDown, ChevronUp, TrendingUp, Target, Trophy, Sparkles } from "lucide-react-native";
+import {
+  ChevronDown,
+  ChevronUp,
+  Sparkles,
+  Target,
+  TrendingUp,
+  Trophy,
+} from "lucide-react-native";
+import { useContext, useEffect, useState } from "react";
+import { StyleSheet, TouchableOpacity, View } from "react-native";
+import { ActivityIndicator, Surface, Text } from "react-native-paper";
 import { AuthContext } from "@/components/providers/AuthProvider";
-import { brandColors } from "@/app/_layout";
 import { API_BASE } from "@/lib/api/getApiUrl";
+import { palette } from "@/lib/theme";
 
 type WeeklyTrends = {
   hasData: boolean;
@@ -34,14 +41,11 @@ export default function WeeklyTrendsCard() {
     }
 
     try {
-      const res = await fetch(
-        `${API_BASE}/api/athlete/weekly-trends`,
-        {
-          headers: {
-            Authorization: `Bearer ${user.id}`,
-          },
-        }
-      );
+      const res = await fetch(`${API_BASE}/api/athlete/weekly-trends`, {
+        headers: {
+          Authorization: `Bearer ${user.id}`,
+        },
+      });
       const data = await res.json();
 
       if (data.success) {
@@ -75,7 +79,7 @@ export default function WeeklyTrendsCard() {
     return (
       <Surface style={styles.container} elevation={1}>
         <View style={styles.headerRow}>
-          <TrendingUp size={18} color={brandColors.smartBlue.DEFAULT} />
+          <TrendingUp size={18} color={palette.blue} />
           <Text variant="titleSmall" style={styles.headerText}>
             Weekly Insights
           </Text>
@@ -94,7 +98,7 @@ export default function WeeklyTrendsCard() {
         activeOpacity={0.7}
       >
         <View style={styles.headerRow}>
-          <TrendingUp size={18} color={brandColors.smartBlue.DEFAULT} />
+          <TrendingUp size={18} color={palette.blue} />
           <Text variant="titleSmall" style={styles.headerText}>
             This Week's Insights
           </Text>
@@ -104,9 +108,9 @@ export default function WeeklyTrendsCard() {
             </Text>
           </View>
           {expanded ? (
-            <ChevronUp size={20} color={brandColors.practicalGray.DEFAULT} />
+            <ChevronUp size={20} color={palette.inkFaint} />
           ) : (
-            <ChevronDown size={20} color={brandColors.practicalGray.DEFAULT} />
+            <ChevronDown size={20} color={palette.inkFaint} />
           )}
         </View>
 
@@ -121,7 +125,7 @@ export default function WeeklyTrendsCard() {
           {trends.highlights && trends.highlights.length > 0 && (
             <View style={styles.section}>
               <View style={styles.sectionHeader}>
-                <Sparkles size={14} color={brandColors.thrivingGreen.DEFAULT} />
+                <Sparkles size={14} color={palette.green} />
                 <Text variant="labelMedium" style={styles.sectionTitle}>
                   Highlights
                 </Text>
@@ -141,7 +145,7 @@ export default function WeeklyTrendsCard() {
           {trends.areas_to_focus && trends.areas_to_focus.length > 0 && (
             <View style={styles.section}>
               <View style={styles.sectionHeader}>
-                <Target size={14} color={brandColors.helpfulOrange.DEFAULT} />
+                <Target size={14} color={palette.orange} />
                 <Text variant="labelMedium" style={styles.sectionTitle}>
                   Focus Areas
                 </Text>
@@ -161,7 +165,7 @@ export default function WeeklyTrendsCard() {
           {trends.next_week_goals && trends.next_week_goals.length > 0 && (
             <View style={styles.section}>
               <View style={styles.sectionHeader}>
-                <Target size={14} color={brandColors.smartBlue.DEFAULT} />
+                <Target size={14} color={palette.blue} />
                 <Text variant="labelMedium" style={styles.sectionTitle}>
                   Next Week Goals
                 </Text>
@@ -180,9 +184,10 @@ export default function WeeklyTrendsCard() {
           {/* PRs Badge */}
           {trends.prs_achieved && trends.prs_achieved > 0 && (
             <View style={styles.prBanner}>
-              <Trophy size={18} color={brandColors.helpfulOrange.DEFAULT} />
+              <Trophy size={18} color={palette.orange} />
               <Text variant="labelMedium" style={styles.prText}>
-                {trends.prs_achieved} PR{trends.prs_achieved > 1 ? "s" : ""} achieved this week!
+                {trends.prs_achieved} PR{trends.prs_achieved > 1 ? "s" : ""}{" "}
+                achieved this week!
               </Text>
             </View>
           )}
@@ -194,8 +199,8 @@ export default function WeeklyTrendsCard() {
 
 const styles = StyleSheet.create({
   container: {
-    backgroundColor: "#fff",
-    borderRadius: 12,
+    backgroundColor: palette.paperElevated,
+    borderRadius: 22,
     padding: 14,
     marginBottom: 16,
   },
@@ -217,7 +222,7 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   headerBadge: {
-    backgroundColor: brandColors.smartBlue.container,
+    backgroundColor: palette.blueWash,
     paddingHorizontal: 8,
     paddingVertical: 2,
     borderRadius: 10,
@@ -225,7 +230,7 @@ const styles = StyleSheet.create({
   headerBadgeText: {
     fontSize: 10,
     fontWeight: "600",
-    color: brandColors.smartBlue.DEFAULT,
+    color: palette.blue,
   },
   summary: {
     marginTop: 8,
@@ -267,13 +272,13 @@ const styles = StyleSheet.create({
     marginTop: 1,
   },
   bulletGreen: {
-    color: brandColors.thrivingGreen.DEFAULT,
+    color: palette.green,
   },
   bulletOrange: {
-    color: brandColors.helpfulOrange.DEFAULT,
+    color: palette.orange,
   },
   bulletBlue: {
-    color: brandColors.smartBlue.DEFAULT,
+    color: palette.blue,
   },
   bulletText: {
     flex: 1,
@@ -290,7 +295,7 @@ const styles = StyleSheet.create({
     marginTop: 4,
   },
   prText: {
-    color: brandColors.helpfulOrange.DEFAULT,
+    color: palette.orange,
     fontWeight: "600",
   },
 });

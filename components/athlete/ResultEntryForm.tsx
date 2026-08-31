@@ -1,17 +1,23 @@
 import { useState } from "react";
-import { View, StyleSheet, ScrollView } from "react-native";
+import { ScrollView, StyleSheet, View } from "react-native";
 import {
-  Text,
-  TextInput,
   Button,
   Chip,
-  Surface,
   SegmentedButtons,
+  Surface,
+  Text,
+  TextInput,
 } from "react-native-paper";
 import { supabase } from "@/lib/supabase/client";
-import { brandColors } from "@/app/_layout";
+import { palette } from "@/lib/theme";
 
-type ResultType = "time" | "rounds_reps" | "weight" | "reps" | "distance" | "calories";
+type ResultType =
+  | "time"
+  | "rounds_reps"
+  | "weight"
+  | "reps"
+  | "distance"
+  | "calories";
 type Scale = "rx" | "scaled" | "rx_plus";
 
 type Props = {
@@ -59,7 +65,9 @@ export default function ResultEntryForm({
     setError(null);
 
     try {
-      const { data: { user } } = await supabase.auth.getUser();
+      const {
+        data: { user },
+      } = await supabase.auth.getUser();
       if (!user) throw new Error("Not authenticated");
 
       const resultData: any = {
@@ -75,8 +83,9 @@ export default function ResultEntryForm({
 
       // Add type-specific values
       switch (resultType) {
-        case "time":
-          const totalSeconds = (parseInt(minutes) || 0) * 60 + (parseInt(seconds) || 0);
+        case "time": {
+          const totalSeconds =
+            (parseInt(minutes) || 0) * 60 + (parseInt(seconds) || 0);
           if (totalSeconds === 0) {
             setError("Please enter a valid time");
             setLoading(false);
@@ -84,6 +93,7 @@ export default function ResultEntryForm({
           }
           resultData.time_seconds = totalSeconds;
           break;
+        }
         case "rounds_reps":
           resultData.rounds = parseInt(rounds) || 0;
           resultData.reps = parseInt(reps) || 0;
@@ -136,7 +146,11 @@ export default function ResultEntryForm({
       }
 
       if (onSuccess) {
-        onSuccess(result, isPR, isPR ? { displayValue: formatResult(result) } : null);
+        onSuccess(
+          result,
+          isPR,
+          isPR ? { displayValue: formatResult(result) } : null,
+        );
       }
     } catch (err: any) {
       setError(err.message);
@@ -147,10 +161,11 @@ export default function ResultEntryForm({
 
   const formatResult = (result: any) => {
     switch (result.result_type) {
-      case "time":
+      case "time": {
         const mins = Math.floor(result.time_seconds / 60);
         const secs = result.time_seconds % 60;
         return `${mins}:${secs.toString().padStart(2, "0")}`;
+      }
       case "rounds_reps":
         return `${result.rounds || 0} + ${result.reps || 0}`;
       case "weight":
@@ -162,11 +177,16 @@ export default function ResultEntryForm({
 
   return (
     <ScrollView style={styles.container}>
-      {workoutTitle && (
-        <Text variant="titleLarge" style={styles.title}>
-          {workoutTitle}
-        </Text>
-      )}
+      {workoutTitle ? (
+        <View>
+          <Text variant="titleLarge" style={styles.title}>
+            {workoutTitle}
+          </Text>
+          <Text variant="bodyMedium" style={styles.lede}>
+            Write it down while it's still in your hands.
+          </Text>
+        </View>
+      ) : null}
 
       {/* Result Type Selection */}
       <Text variant="labelLarge" style={styles.label}>
@@ -201,7 +221,9 @@ export default function ResultEntryForm({
               keyboardType="numeric"
               style={styles.smallInput}
             />
-            <Text variant="headlineMedium" style={styles.colon}>:</Text>
+            <Text variant="headlineMedium" style={styles.colon}>
+              :
+            </Text>
             <TextInput
               mode="outlined"
               label="Sec"
@@ -223,7 +245,9 @@ export default function ResultEntryForm({
               keyboardType="numeric"
               style={styles.smallInput}
             />
-            <Text variant="headlineMedium" style={styles.colon}>+</Text>
+            <Text variant="headlineMedium" style={styles.colon}>
+              +
+            </Text>
             <TextInput
               mode="outlined"
               label="Reps"
@@ -252,7 +276,13 @@ export default function ResultEntryForm({
           <View style={styles.row}>
             <TextInput
               mode="outlined"
-              label={resultType === "distance" ? "Meters" : resultType === "calories" ? "Calories" : "Reps"}
+              label={
+                resultType === "distance"
+                  ? "Meters"
+                  : resultType === "calories"
+                    ? "Calories"
+                    : "Reps"
+              }
               value={count}
               onChangeText={setCount}
               keyboardType="numeric"
@@ -347,7 +377,7 @@ export default function ResultEntryForm({
           disabled={loading}
           style={[styles.button, styles.submitButton]}
         >
-          Log Result
+          Log it
         </Button>
       </View>
     </ScrollView>
@@ -358,11 +388,17 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     padding: 16,
+    backgroundColor: palette.paper,
   },
   title: {
     textAlign: "center",
-    marginBottom: 24,
+    marginBottom: 8,
     fontWeight: "bold",
+  },
+  lede: {
+    textAlign: "center",
+    marginBottom: 20,
+    opacity: 0.7,
   },
   label: {
     marginTop: 16,
@@ -380,7 +416,7 @@ const styles = StyleSheet.create({
   inputSurface: {
     padding: 16,
     borderRadius: 12,
-    backgroundColor: "#fff",
+    backgroundColor: palette.paperElevated,
   },
   row: {
     flexDirection: "row",
@@ -411,7 +447,7 @@ const styles = StyleSheet.create({
     minWidth: 36,
   },
   error: {
-    color: brandColors.error,
+    color: palette.error,
     marginTop: 16,
     textAlign: "center",
   },

@@ -2,108 +2,145 @@ import { useState } from "react";
 import {
   KeyboardAvoidingView,
   Platform,
+  Pressable,
   ScrollView,
   StyleSheet,
   View,
 } from "react-native";
-import { Card, SegmentedButtons, Text, useTheme } from "react-native-paper";
-import { SafeAreaView } from "react-native-safe-area-context";
 import { LoginForm } from "@/components/forms/LoginForm";
 import { SignupForm } from "@/components/forms/SignupForm";
+import { AppText } from "@/components/ui/AppText";
+import { HaltereMark } from "@/components/ui/HaltereMark";
+import { Screen } from "@/components/ui/Screen";
+import { fonts, palette, SUPPORT_EMAIL } from "@/lib/theme";
 
 export default function LoginScreen() {
-  const [activeTab, setActiveTab] = useState<string>("login");
-  const theme = useTheme();
+  const [activeTab, setActiveTab] = useState<"login" | "signup">("login");
 
   return (
-    <SafeAreaView
-      style={[styles.container, { backgroundColor: theme.colors.background }]}
-    >
+    <Screen notebook={false} edges={["top", "bottom"]}>
       <KeyboardAvoidingView
         behavior={Platform.OS === "ios" ? "padding" : "height"}
-        style={styles.keyboardView}
+        style={styles.flex}
       >
         <ScrollView
-          style={styles.scrollView}
-          contentContainerStyle={styles.scrollContent}
+          contentContainerStyle={styles.scroll}
+          keyboardShouldPersistTaps="handled"
         >
-          <Card style={styles.card} elevation={2}>
-            <Card.Content style={styles.cardContent}>
-              {/* Header */}
-              <View style={styles.header}>
-                <Text
-                  variant="headlineMedium"
-                  style={[styles.title, { color: theme.colors.onSurface }]}
-                >
-                  {activeTab === "login" ? "Welcome back" : "Join HalteresAI"}
-                </Text>
-                <Text
-                  variant="bodyMedium"
-                  style={[
-                    styles.subtitle,
-                    { color: theme.colors.onSurfaceVariant },
-                  ]}
-                >
-                  {activeTab === "login"
-                    ? "Access workouts and AI feedback"
-                    : "Track workouts and get personalized insights"}
-                </Text>
-              </View>
+          <View style={styles.hero}>
+            <View style={styles.markHalo}>
+              <HaltereMark size={64} color={palette.blue} />
+            </View>
+            <AppText variant="eyebrow" style={styles.brand}>
+              Halteres
+            </AppText>
+            <AppText variant="display" style={styles.title}>
+              {activeTab === "login"
+                ? "Back to the page."
+                : "Write your own program."}
+            </AppText>
+            <AppText variant="italic" style={styles.sub}>
+              {activeTab === "login"
+                ? "Pick up today's session, log it, keep going."
+                : "Self-coached. Already trains. No gym code."}
+            </AppText>
+          </View>
 
-              {/* Tab Navigation */}
-              <SegmentedButtons
-                value={activeTab}
-                onValueChange={setActiveTab}
-                buttons={[
-                  { value: "login", label: "Login" },
-                  { value: "signup", label: "Sign Up" },
-                ]}
-                style={styles.tabs}
-              />
+          <View style={styles.switcher}>
+            {(
+              [
+                ["login", "Sign in"],
+                ["signup", "Join"],
+              ] as const
+            ).map(([key, label]) => {
+              const on = activeTab === key;
+              return (
+                <Pressable
+                  key={key}
+                  onPress={() => setActiveTab(key)}
+                  style={[styles.switchItem, on && styles.switchOn]}
+                >
+                  <AppText
+                    variant="label"
+                    style={{ color: on ? palette.paper : palette.inkSoft }}
+                  >
+                    {label}
+                  </AppText>
+                </Pressable>
+              );
+            })}
+          </View>
 
-              {/* Form Content */}
-              {activeTab === "login" ? <LoginForm /> : <SignupForm />}
-            </Card.Content>
-          </Card>
+          <View style={styles.form}>
+            {activeTab === "login" ? <LoginForm /> : <SignupForm />}
+          </View>
+
+          <AppText variant="bodySmall" style={styles.contact}>
+            Questions? {SUPPORT_EMAIL}
+          </AppText>
         </ScrollView>
       </KeyboardAvoidingView>
-    </SafeAreaView>
+    </Screen>
   );
 }
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-  },
-  keyboardView: {
-    flex: 1,
-  },
-  scrollView: {
-    flex: 1,
-  },
-  scrollContent: {
+  flex: { flex: 1 },
+  scroll: {
     flexGrow: 1,
+    paddingHorizontal: 24,
+    paddingTop: 28,
+    paddingBottom: 40,
+  },
+  hero: {
+    marginBottom: 28,
+  },
+  markHalo: {
+    width: 88,
+    height: 88,
+    borderRadius: 32,
+    backgroundColor: palette.blueWash,
+    alignItems: "center",
     justifyContent: "center",
-    padding: 24,
+    marginBottom: 20,
+    transform: [{ rotate: "-8deg" }],
   },
-  card: {
-    borderRadius: 16,
-  },
-  cardContent: {
-    padding: 32,
-  },
-  header: {
-    marginBottom: 24,
+  brand: {
+    marginBottom: 8,
+    color: palette.blue,
   },
   title: {
-    textAlign: "center",
-    marginBottom: 8,
-    fontWeight: "700",
+    marginBottom: 10,
   },
-  subtitle: {
-    textAlign: "center",
+  sub: {
+    maxWidth: 320,
   },
-  tabs: {
-    marginBottom: 24,
+  switcher: {
+    flexDirection: "row",
+    backgroundColor: palette.paperSunken,
+    borderRadius: 999,
+    padding: 4,
+    marginBottom: 22,
+    alignSelf: "flex-start",
+  },
+  switchItem: {
+    paddingHorizontal: 18,
+    paddingVertical: 9,
+    borderRadius: 999,
+  },
+  switchOn: {
+    backgroundColor: palette.ink,
+  },
+  form: {
+    backgroundColor: palette.paperElevated,
+    borderRadius: 22,
+    padding: 20,
+    borderWidth: 1,
+    borderColor: "rgba(26, 35, 50, 0.05)",
+  },
+  contact: {
+    textAlign: "center",
+    marginTop: 24,
+    fontFamily: fonts.ui,
   },
 });

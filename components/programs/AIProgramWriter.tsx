@@ -1,6 +1,5 @@
 import { useRouter } from "expo-router";
 import { useCallback, useEffect, useMemo, useState } from "react";
-import type { TwoPhaseWorkout } from "@/lib/types/twoPhaseGeneration";
 import { Alert, ScrollView, StyleSheet, View } from "react-native";
 import {
   ActivityIndicator,
@@ -20,6 +19,7 @@ import {
   gymEquipmentPresets,
 } from "@/lib/constants/programConfig";
 import { supabase } from "@/lib/supabase/client";
+import type { TwoPhaseWorkout } from "@/lib/types/twoPhaseGeneration";
 import { GenerationConfirmModal } from "./GenerationConfirmModal";
 import { ProgramDetailsSection } from "./ProgramDetailsSection";
 import { ProgramEssentials } from "./ProgramEssentials";
@@ -130,7 +130,10 @@ export function AIProgramWriter({ programId }: AIProgramWriterProps) {
     }
 
     // Get start date from formState or program
-    const startDateStr = formState?.startDate || program?.calendar_data?.start_date || program?.start_date;
+    const startDateStr =
+      formState?.startDate ||
+      program?.calendar_data?.start_date ||
+      program?.start_date;
 
     // Calculate week number from scheduled_date if not set
     const calculateWeekNumber = (scheduledDate?: string): number => {
@@ -149,7 +152,9 @@ export function AIProgramWriter({ programId }: AIProgramWriterProps) {
       title: w.title,
       body: w.body || null,
       body_skeleton: w.body_skeleton || w.body || null,
-      generation_status: (w.generation_status || "detailed") as "skeleton" | "detailed",
+      generation_status: (w.generation_status || "detailed") as
+        | "skeleton"
+        | "detailed",
       week_number: w.week_number || calculateWeekNumber(w.scheduled_date),
       scheduled_date: w.scheduled_date,
       is_reference: false,
@@ -490,7 +495,9 @@ export function AIProgramWriter({ programId }: AIProgramWriterProps) {
       const { includeEnhanced = false } = options || {};
 
       // Import groupWorkoutsByWeek dynamically to group workouts
-      const { groupWorkoutsByWeek } = await import("@/lib/types/twoPhaseGeneration");
+      const { groupWorkoutsByWeek } = await import(
+        "@/lib/types/twoPhaseGeneration"
+      );
       const weeks = groupWorkoutsByWeek(workoutsForPreview);
 
       // Filter based on options - either all weeks or just skeleton weeks
@@ -527,7 +534,9 @@ export function AIProgramWriter({ programId }: AIProgramWriterProps) {
         });
 
         if (!result.success) {
-          setSnackbarMessage(`Enhancement failed on Week ${week.weekNumber}: ${result.error}`);
+          setSnackbarMessage(
+            `Enhancement failed on Week ${week.weekNumber}: ${result.error}`,
+          );
           refetchWorkouts();
           return;
         }
@@ -673,7 +682,8 @@ export function AIProgramWriter({ programId }: AIProgramWriterProps) {
         />
 
         {/* Skeleton Preview (shown after skeleton generation OR when existing skeleton workouts exist) */}
-        {(showSkeletonPreview && isSkeletonComplete) || (hasSkeletonWorkouts && !isGenerating) ? (
+        {(showSkeletonPreview && isSkeletonComplete) ||
+        (hasSkeletonWorkouts && !isGenerating) ? (
           <SkeletonPreview
             workouts={workoutsForPreview}
             weekNotes={weekNotes}
@@ -774,7 +784,7 @@ export function AIProgramWriter({ programId }: AIProgramWriterProps) {
         {/* Generate FAB */}
         <FAB
           icon={workouts.length > 0 ? "refresh" : "play"}
-          label={workouts.length > 0 ? "Regenerate" : "Generate"}
+          label={workouts.length > 0 ? "Rewrite days" : "Generate days"}
           onPress={handleGenerateClick}
           disabled={isGenerating}
           style={[
@@ -819,6 +829,7 @@ export function AIProgramWriter({ programId }: AIProgramWriterProps) {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
+    backgroundColor: "#F4EFE6",
   },
   scrollView: {
     flex: 1,
@@ -826,6 +837,7 @@ const styles = StyleSheet.create({
   scrollContent: {
     padding: 16,
     paddingBottom: 100,
+    backgroundColor: "transparent",
   },
   loadingContainer: {
     flex: 1,

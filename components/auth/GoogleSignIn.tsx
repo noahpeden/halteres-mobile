@@ -85,7 +85,7 @@ export function GoogleSignIn() {
     <View style={styles.container}>
       <View style={styles.divider}>
         <View style={styles.dividerLine} />
-        <Text style={styles.dividerText}>OR</Text>
+        <Text style={styles.dividerText}>or keep it simple</Text>
         <View style={styles.dividerLine} />
       </View>
 
@@ -96,6 +96,7 @@ export function GoogleSignIn() {
         disabled={isLoading}
         style={styles.button}
         contentStyle={styles.buttonContent}
+        textColor="#1A2332"
         icon={() => (
           <Svg width={20} height={20} viewBox="0 0 256 262">
             <Path
@@ -125,27 +126,31 @@ export function GoogleSignIn() {
 
 const styles = StyleSheet.create({
   container: {
-    marginTop: 16,
+    marginTop: 12,
   },
   divider: {
     flexDirection: "row",
     alignItems: "center",
-    marginVertical: 16,
+    marginVertical: 14,
   },
   dividerLine: {
     flex: 1,
     height: 1,
-    backgroundColor: "#e0e0e0",
+    backgroundColor: "#D9D0C0",
   },
   dividerText: {
-    marginHorizontal: 16,
-    color: "#666",
-    fontSize: 12,
+    marginHorizontal: 12,
+    color: "#6B7787",
+    fontSize: 11,
+    letterSpacing: 0.4,
+    textTransform: "uppercase",
   },
   button: {
-    borderColor: "#ddd",
+    borderColor: "#D9D0C0",
+    borderRadius: 16,
+    backgroundColor: "#FFFCF6",
   },
   buttonContent: {
-    paddingVertical: 6,
+    paddingVertical: 8,
   },
 });

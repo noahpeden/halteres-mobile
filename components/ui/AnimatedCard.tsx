@@ -1,7 +1,7 @@
-import { ReactNode } from "react";
-import { Pressable, StyleSheet, ViewStyle } from "react-native";
-import Animated from "react-native-reanimated";
+import type { ReactNode } from "react";
+import { Pressable, StyleSheet, type ViewStyle } from "react-native";
 import { Card, useTheme } from "react-native-paper";
+import Animated from "react-native-reanimated";
 import { usePressAnimation } from "@/lib/animations";
 
 type AnimatedCardProps = {
@@ -71,7 +71,7 @@ export function AnimatedCard({
 
 const styles = StyleSheet.create({
   card: {
-    backgroundColor: "#ffffff",
+    backgroundColor: "#FFFCF6",
     borderRadius: 16,
   },
   elevated: {

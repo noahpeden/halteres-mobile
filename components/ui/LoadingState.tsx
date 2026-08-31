@@ -1,6 +1,7 @@
-import { brandColors } from "@/app/_layout";
 import { Dumbbell, Loader2 } from "lucide-react-native";
+import { useEffect } from "react";
 import { StyleSheet, View } from "react-native";
+import { Text } from "react-native-paper";
 import Animated, {
   Easing,
   useAnimatedStyle,
@@ -8,8 +9,7 @@ import Animated, {
   withRepeat,
   withTiming,
 } from "react-native-reanimated";
-import { Text } from "react-native-paper";
-import { useEffect } from "react";
+import { palette } from "@/lib/theme";
 
 type LoadingStateProps = {
   message?: string;
@@ -34,7 +34,7 @@ export function LoadingState({
       -1,
       true,
     );
-  }, []);
+  }, [pulse, rotation]);
 
   const spinStyle = useAnimatedStyle(() => ({
     transform: [{ rotate: `${rotation.value}deg` }],
@@ -48,11 +48,7 @@ export function LoadingState({
     return (
       <View style={styles.inlineContainer}>
         <Animated.View style={spinStyle}>
-          <Loader2
-            size={18}
-            color={brandColors.smartBlue.DEFAULT}
-            strokeWidth={2}
-          />
+          <Loader2 size={18} color={palette.blue} strokeWidth={2} />
         </Animated.View>
         <Text variant="bodySmall" style={styles.inlineText}>
           {message}
@@ -66,11 +62,7 @@ export function LoadingState({
       <View style={styles.fullContainer}>
         <View style={styles.iconWrapper}>
           <Animated.View style={[styles.iconCircle, pulseStyle]}>
-            <Dumbbell
-              size={32}
-              color={brandColors.smartBlue.DEFAULT}
-              strokeWidth={1.5}
-            />
+            <Dumbbell size={32} color={palette.blue} strokeWidth={1.5} />
           </Animated.View>
           <Animated.View style={[styles.spinnerWrapper, spinStyle]}>
             <View style={styles.spinnerDot} />
@@ -91,11 +83,7 @@ export function LoadingState({
     <View style={styles.container}>
       <Animated.View style={[styles.iconCircleSmall, pulseStyle]}>
         <Animated.View style={spinStyle}>
-          <Loader2
-            size={24}
-            color={brandColors.smartBlue.DEFAULT}
-            strokeWidth={2}
-          />
+          <Loader2 size={24} color={palette.blue} strokeWidth={2} />
         </Animated.View>
       </Animated.View>
       <Text variant="bodyMedium" style={styles.message}>
@@ -118,7 +106,7 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     paddingVertical: 48,
     paddingHorizontal: 32,
-    backgroundColor: "#f8f9fa",
+    backgroundColor: palette.paper,
   },
   inlineContainer: {
     flexDirection: "row",
@@ -139,7 +127,7 @@ const styles = StyleSheet.create({
     width: 72,
     height: 72,
     borderRadius: 36,
-    backgroundColor: brandColors.smartBlue.container,
+    backgroundColor: palette.blueWash,
     alignItems: "center",
     justifyContent: "center",
   },
@@ -147,7 +135,7 @@ const styles = StyleSheet.create({
     width: 56,
     height: 56,
     borderRadius: 28,
-    backgroundColor: brandColors.smartBlue.container,
+    backgroundColor: palette.blueWash,
     alignItems: "center",
     justifyContent: "center",
     marginBottom: 16,
@@ -165,7 +153,7 @@ const styles = StyleSheet.create({
     width: 8,
     height: 8,
     borderRadius: 4,
-    backgroundColor: brandColors.smartBlue.DEFAULT,
+    backgroundColor: palette.blue,
   },
   title: {
     fontWeight: "700",
@@ -173,13 +161,13 @@ const styles = StyleSheet.create({
     marginBottom: 8,
   },
   subtitle: {
-    color: brandColors.practicalGray.DEFAULT,
+    color: palette.inkFaint,
   },
   message: {
-    color: brandColors.practicalGray.DEFAULT,
+    color: palette.inkFaint,
     fontWeight: "500",
   },
   inlineText: {
-    color: brandColors.practicalGray.DEFAULT,
+    color: palette.inkFaint,
   },
 });

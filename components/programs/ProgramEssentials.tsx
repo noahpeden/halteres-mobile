@@ -169,13 +169,13 @@ export function ProgramEssentials({
       <Card.Content>
         <Text
           variant="titleMedium"
-          style={[styles.sectionTitle, { color: theme.colors.primary }]}
+          style={[styles.sectionTitle, { color: theme.colors.onSurface }]}
         >
           Essentials
         </Text>
         <Text variant="bodySmall" style={styles.sectionSubtitle}>
-          Our platform and AI use this data as the highest priority when
-          designing your program.
+          The writer treats this as the brief — methodology, influences, and how
+          you already train.
         </Text>
 
         {/* Training Methodology */}
@@ -269,7 +269,7 @@ export function ProgramEssentials({
 
         {/* Program Name */}
         <View style={styles.fieldContainer}>
-        <View style={styles.labelRow}>
+          <View style={styles.labelRow}>
             <Text variant="labelLarge">Program Name</Text>
             <Info size={16} color={theme.colors.primary} />
           </View>

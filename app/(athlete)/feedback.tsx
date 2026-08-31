@@ -1,12 +1,12 @@
-import { useState, useEffect, useContext } from "react";
-import { View, StyleSheet, ScrollView, RefreshControl } from "react-native";
-import { Text, Surface, ActivityIndicator } from "react-native-paper";
-import { SafeAreaView } from "react-native-safe-area-context";
 import { Sparkles } from "lucide-react-native";
-import { brandColors } from "@/app/_layout";
+import { useContext, useEffect, useState } from "react";
+import { RefreshControl, ScrollView, StyleSheet, View } from "react-native";
+import { ActivityIndicator, Surface, Text } from "react-native-paper";
+import { SafeAreaView } from "react-native-safe-area-context";
+import AIFeedbackCard from "@/components/athlete/AIFeedbackCard";
 import { AuthContext } from "@/components/providers/AuthProvider";
 import { supabase } from "@/lib/supabase/client";
-import AIFeedbackCard from "@/components/athlete/AIFeedbackCard";
+import { palette } from "@/lib/theme";
 
 type WorkoutResult = {
   id: string;
@@ -79,26 +79,22 @@ export default function FeedbackScreen() {
       >
         <View style={styles.header}>
           <Text variant="headlineMedium" style={styles.title}>
-            AI Insights
+            Notes from the writer
           </Text>
           <Text variant="bodyMedium" style={styles.subtitle}>
-            Personalized feedback and recommendations
+            How the last sessions actually felt
           </Text>
         </View>
 
         {results.length === 0 ? (
           <Surface style={styles.emptyState} elevation={2}>
-            <Sparkles
-              size={48}
-              color={brandColors.practicalGray.light}
-              style={styles.icon}
-            />
+            <Sparkles size={48} color={palette.inkFaint} style={styles.icon} />
             <Text variant="titleMedium" style={styles.emptyTitle}>
-              No Insights Yet
+              Nothing to read yet
             </Text>
             <Text variant="bodyMedium" style={styles.emptyText}>
-              Complete workouts and log results to receive personalized AI feedback
-              on your performance, recovery suggestions, and training recommendations.
+              Log a session and we'll write back — what went well, what to
+              watch, what to try next.
             </Text>
           </Surface>
         ) : (
@@ -126,7 +122,7 @@ export default function FeedbackScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: "#f8f9fa",
+    backgroundColor: palette.paper,
   },
   loadingContainer: {
     flex: 1,
@@ -135,7 +131,7 @@ const styles = StyleSheet.create({
   },
   scrollContent: {
     padding: 16,
-    paddingBottom: 32,
+    paddingBottom: 120,
   },
   header: {
     marginBottom: 24,
@@ -151,7 +147,7 @@ const styles = StyleSheet.create({
     padding: 48,
     borderRadius: 16,
     alignItems: "center",
-    backgroundColor: "#fff",
+    backgroundColor: palette.paperElevated,
   },
   icon: {
     marginBottom: 16,

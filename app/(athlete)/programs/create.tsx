@@ -1,7 +1,6 @@
-import { brandColors } from "@/app/_layout";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useRouter } from "expo-router";
-import { ArrowLeft, Clock, FileText, Sparkles } from "lucide-react-native";
+import { ArrowLeft, PenLine } from "lucide-react-native";
 import { useContext, useState } from "react";
 import { Controller, useForm } from "react-hook-form";
 import {
@@ -13,22 +12,24 @@ import {
   StyleSheet,
   View,
 } from "react-native";
+import { TextInput } from "react-native-paper";
 import Animated, { FadeInDown } from "react-native-reanimated";
-import { Text, TextInput } from "react-native-paper";
-import { SafeAreaView } from "react-native-safe-area-context";
 import { AuthContext } from "@/components/providers/AuthProvider";
+import { AppText } from "@/components/ui/AppText";
+import { HButton } from "@/components/ui/HButton";
+import { Screen } from "@/components/ui/Screen";
 import { useClients, useCreateClient } from "@/hooks/useClients";
 import { useCreateProgram } from "@/hooks/usePrograms";
-import { type ProgramInput, programSchema } from "@/lib/validations/program.schema";
 import { supabase } from "@/lib/supabase/client";
-// Intake happens in the writer/details screen; this screen only creates a shell
+import { palette } from "@/lib/theme";
+import {
+  type ProgramInput,
+  programSchema,
+} from "@/lib/validations/program.schema";
 
 /**
  * Creates a program for the current, self-coached athlete.
- *
- * There is no client/gym picker here: every account has exactly one
- * "self" entity (created lazily on first use) that all of the athlete's
- * own programs are attached to under the hood.
+ * Entity creation stays internal — not surfaced as a coach/client feature.
  */
 export default function CreateProgramScreen() {
   const router = useRouter();
@@ -36,7 +37,6 @@ export default function CreateProgramScreen() {
   const createProgram = useCreateProgram();
   const createClient = useCreateClient();
   const { data: clients } = useClients();
-
   const [isLoading, setIsLoading] = useState(false);
 
   const {
@@ -54,25 +54,21 @@ export default function CreateProgramScreen() {
     },
   });
 
-  // Find (or lazily create) the single entity that represents the
-  // logged-in athlete themselves.
   const getOrCreateSelfEntityId = async (): Promise<string> => {
     const existing = clients?.[0];
     if (existing) return existing.id;
 
-    const name = profile?.display_name || profile?.full_name || "My Training";
+    const name = profile?.display_name || profile?.full_name || "Self";
     const created = await createClient.mutateAsync({ name, type: "CLIENT" });
     return created.id;
   };
 
-  // Check for an existing active program (today within start/end)
   const findActiveProgramForUser = async (): Promise<string | null> => {
     const {
       data: { user },
     } = await supabase.auth.getUser();
     if (!user) return null;
 
-    // Get all of this user's entities (self-coached)
     const { data: entities } = await supabase
       .from("entities")
       .select("id")
@@ -93,7 +89,10 @@ export default function CreateProgramScreen() {
     const todayStr = new Date().toISOString().split("T")[0];
     const today = new Date(todayStr);
 
-    for (const p of programs as any[]) {
+    for (const p of programs as {
+      id: string;
+      calendar_data?: { start_date?: string; end_date?: string };
+    }[]) {
       const cal = p.calendar_data || {};
       const start = cal.start_date ? new Date(cal.start_date) : null;
       const end = cal.end_date ? new Date(cal.end_date) : null;
@@ -101,7 +100,7 @@ export default function CreateProgramScreen() {
         const startD = new Date(start.toISOString().split("T")[0]);
         const endD = new Date(end.toISOString().split("T")[0]);
         if (today >= startD && today <= endD) {
-          return p.id as string;
+          return p.id;
         }
       }
     }
@@ -111,12 +110,11 @@ export default function CreateProgramScreen() {
   const onSubmit = async (data: ProgramInput) => {
     try {
       setIsLoading(true);
-      // Enforce single active program
       const activeProgramId = await findActiveProgramForUser();
       if (activeProgramId) {
         Alert.alert(
-          "Active Program In Progress",
-          "You already have an active program. Opening it now."
+          "You already have a live block",
+          "Opening it so you can keep writing.",
         );
         router.replace(`/(athlete)/programs/${activeProgramId}`);
         return;
@@ -143,176 +141,153 @@ export default function CreateProgramScreen() {
   };
 
   return (
-    <SafeAreaView style={styles.container}>
+    <Screen notebook={false} edges={["top"]}>
       <KeyboardAvoidingView
         behavior={Platform.OS === "ios" ? "padding" : "height"}
-        style={styles.keyboardView}
+        style={styles.flex}
       >
         <View style={styles.header}>
-          <Pressable onPress={() => router.back()} style={styles.backButton}>
-            <ArrowLeft size={22} color={brandColors.practicalGray.DEFAULT} />
+          <Pressable onPress={() => router.back()} style={styles.back}>
+            <ArrowLeft size={22} color={palette.ink} />
           </Pressable>
-          <Text variant="titleMedium" style={styles.headerTitle}>
-            New Program
-          </Text>
-          <View style={styles.backButton} />
+          <AppText variant="title">New block</AppText>
+          <View style={styles.back} />
         </View>
 
         <ScrollView
-          style={styles.scrollView}
-          contentContainerStyle={styles.scrollContent}
+          contentContainerStyle={styles.scroll}
           showsVerticalScrollIndicator={false}
+          keyboardShouldPersistTaps="handled"
         >
-          <Animated.View entering={FadeInDown.duration(300).delay(100)} style={styles.heroSection}>
-            <View style={styles.heroIconContainer}>
-              <Sparkles size={32} color={brandColors.smartBlue.DEFAULT} strokeWidth={1.5} />
+          <Animated.View
+            entering={FadeInDown.duration(280)}
+            style={styles.hero}
+          >
+            <View style={styles.heroMark}>
+              <PenLine size={28} color={palette.orange} strokeWidth={1.6} />
             </View>
-            <Text variant="headlineSmall" style={styles.heroTitle}>
-              Build Your Training Program
-            </Text>
-            <Text variant="bodyMedium" style={styles.heroSubtitle}>
-              Give it a name and a length, then generate AI-powered workouts
-              tailored to your goals in the next step.
-            </Text>
+            <AppText variant="display" style={styles.heroTitle}>
+              Name the block.
+            </AppText>
+            <AppText variant="italic">
+              Weeks stay flexible in the writer — one week, eight, twelve, or a
+              full season. Next screen: generate the days.
+            </AppText>
           </Animated.View>
 
-          <Animated.View entering={FadeInDown.duration(300).delay(200)} style={styles.formCard}>
-            <View style={styles.formCardHeader}>
-              <View style={styles.formCardIconContainer}>
-                <FileText size={18} color={brandColors.smartBlue.DEFAULT} strokeWidth={2} />
-              </View>
-              <Text variant="titleSmall" style={styles.formCardTitle}>
-                Program Details
-              </Text>
-            </View>
-
+          <Animated.View
+            entering={FadeInDown.duration(280).delay(80)}
+            style={styles.form}
+          >
             <Controller
               control={control}
               name="name"
               render={({ field: { onChange, onBlur, value } }) => (
-                <View style={styles.inputContainer}>
+                <View>
                   <TextInput
-                    label="Program Name"
-                    placeholder="e.g., 12-Week Strength Builder"
+                    label="Program name"
+                    placeholder="e.g. Spring strength, garage days"
                     value={value}
                     onChangeText={onChange}
                     onBlur={onBlur}
                     error={!!errors.name}
-                    autoCapitalize="words"
+                    autoCapitalize="sentences"
                     mode="outlined"
                     style={styles.input}
                   />
-                  {errors.name && <Text style={styles.errorText}>{errors.name?.message}</Text>}
+                  {errors.name ? (
+                    <AppText
+                      variant="bodySmall"
+                      color={palette.error}
+                      style={styles.err}
+                    >
+                      {errors.name.message}
+                    </AppText>
+                  ) : null}
                 </View>
               )}
             />
-
             <Controller
               control={control}
               name="description"
               render={({ field: { onChange, onBlur, value } }) => (
-                <View style={styles.inputContainer}>
-                  <TextInput
-                    label="Description (Optional)"
-                    placeholder="Describe your goals and focus..."
-                    value={value}
-                    onChangeText={onChange}
-                    onBlur={onBlur}
-                    multiline
-                    numberOfLines={4}
-                    mode="outlined"
-                    style={[styles.input, styles.textArea]}
-                  />
-                </View>
+                <TextInput
+                  label="What are you writing toward? (optional)"
+                  placeholder="Influences, equipment, how you like to train…"
+                  value={value}
+                  onChangeText={onChange}
+                  onBlur={onBlur}
+                  multiline
+                  numberOfLines={4}
+                  mode="outlined"
+                  style={[styles.input, styles.area]}
+                />
               )}
             />
           </Animated.View>
 
-          <Animated.View entering={FadeInDown.duration(300).delay(400)} style={styles.buttonContainer}>
-            <Pressable
+          <Animated.View
+            entering={FadeInDown.duration(280).delay(160)}
+            style={styles.actions}
+          >
+            <HButton
+              label={isLoading ? "Opening writer…" : "Continue to writer"}
               onPress={handleSubmit(onSubmit)}
-              disabled={isLoading}
-              style={[styles.primaryButton, isLoading && styles.primaryButtonDisabled]}
-            >
-              <Text style={styles.primaryButtonText}>
-                {isLoading ? "Creating..." : "Continue"}
-              </Text>
-            </Pressable>
-            <Pressable onPress={() => router.back()} disabled={isLoading} style={styles.secondaryButton}>
-              <Text style={styles.secondaryButtonText}>Cancel</Text>
-            </Pressable>
+              loading={isLoading}
+              tone="orange"
+            />
+            <HButton
+              label="Cancel"
+              onPress={() => router.back()}
+              tone="ghost"
+            />
           </Animated.View>
         </ScrollView>
       </KeyboardAvoidingView>
-    </SafeAreaView>
+    </Screen>
   );
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: "#f8f9fa" },
-  keyboardView: { flex: 1 },
+  flex: { flex: 1 },
   header: {
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",
-    paddingHorizontal: 16,
-    paddingVertical: 14,
-    backgroundColor: "#ffffff",
+    paddingHorizontal: 12,
+    paddingVertical: 10,
     borderBottomWidth: 1,
-    borderBottomColor: "#f0f0f0",
+    borderBottomColor: palette.rule,
   },
-  backButton: { width: 40, height: 40, alignItems: "center", justifyContent: "center" },
-  headerTitle: { fontWeight: "700", color: "#121212" },
-  scrollView: { flex: 1 },
-  scrollContent: { padding: 20, paddingBottom: 40 },
-  heroSection: { alignItems: "center", paddingVertical: 24, marginBottom: 8 },
-  heroIconContainer: {
-    width: 72,
-    height: 72,
-    borderRadius: 36,
-    backgroundColor: brandColors.smartBlue.container,
+  back: {
+    width: 40,
+    height: 40,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  scroll: { padding: 22, paddingBottom: 40 },
+  hero: { marginBottom: 22 },
+  heroMark: {
+    width: 64,
+    height: 64,
+    borderRadius: 22,
+    backgroundColor: palette.orangeWash,
     alignItems: "center",
     justifyContent: "center",
     marginBottom: 16,
+    transform: [{ rotate: "-5deg" }],
   },
-  heroTitle: { fontWeight: "700", color: "#121212", marginBottom: 8, textAlign: "center" },
-  heroSubtitle: { color: brandColors.practicalGray.DEFAULT, textAlign: "center" },
-  formCard: {
-    backgroundColor: "#ffffff",
-    borderRadius: 16,
-    padding: 20,
-    marginBottom: 16,
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.04,
-    shadowRadius: 8,
-    elevation: 2,
+  heroTitle: { marginBottom: 8 },
+  form: {
+    backgroundColor: palette.paperElevated,
+    borderRadius: 22,
+    padding: 16,
+    gap: 8,
+    borderWidth: 1,
+    borderColor: "rgba(26, 35, 50, 0.05)",
   },
-  formCardHeader: { flexDirection: "row", alignItems: "center", marginBottom: 20 },
-  formCardIconContainer: {
-    width: 36,
-    height: 36,
-    borderRadius: 10,
-    backgroundColor: brandColors.smartBlue.container,
-    alignItems: "center",
-    justifyContent: "center",
-    marginRight: 12,
-  },
-  formCardTitle: { fontWeight: "700", color: "#121212" },
-  inputContainer: { marginBottom: 4 },
-  input: { backgroundColor: "#ffffff" },
-  textArea: { minHeight: 100 },
-  errorText: { color: "#dc2626", fontSize: 12, marginTop: 4, marginLeft: 4 },
-  fieldHint: { color: brandColors.practicalGray.DEFAULT, fontSize: 12, marginTop: 4, marginLeft: 4 },
-  buttonContainer: { gap: 12, marginTop: 8 },
-  primaryButton: {
-    backgroundColor: brandColors.smartBlue.DEFAULT,
-    borderRadius: 14,
-    paddingVertical: 16,
-    alignItems: "center",
-  },
-  primaryButtonDisabled: { opacity: 0.6 },
-  primaryButtonText: { color: "#fff", fontWeight: "700", fontSize: 16 },
-  secondaryButton: { paddingVertical: 12, alignItems: "center" },
-  secondaryButtonText: { color: brandColors.practicalGray.medium, fontWeight: "600" },
+  input: { backgroundColor: palette.paperElevated },
+  area: { minHeight: 110 },
+  err: { marginTop: 4, marginLeft: 4 },
+  actions: { gap: 10, marginTop: 22 },
 });
