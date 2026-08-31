@@ -5,6 +5,7 @@ import { Alert, Platform, StyleSheet, View } from "react-native";
 import { Button, Text } from "react-native-paper";
 import Svg, { Path } from "react-native-svg";
 import { useOAuth } from "@clerk/expo";
+import { useSignInWithApple } from "@clerk/expo/apple";
 
 // Complete any pending auth sessions
 WebBrowser.maybeCompleteAuthSession();
@@ -15,7 +16,7 @@ const redirectUri = AuthSession.makeRedirectUri({ scheme: "halteres" });
 export function GoogleSignIn() {
   const [isLoading, setIsLoading] = useState(false);
   const googleOAuth = useOAuth({ strategy: "oauth_google" });
-  const appleOAuth = useOAuth({ strategy: "oauth_apple" });
+  const { startAppleAuthenticationFlow } = useSignInWithApple();
 
   const handleGoogleSignIn = async () => {
     try {
@@ -40,22 +41,20 @@ export function GoogleSignIn() {
   };
 
   const handleAppleSignIn = async () => {
+    if (Platform.OS !== "ios") return;
     try {
       setIsLoading(true);
-      const { createdSessionId, setActive } = await appleOAuth.startOAuthFlow({
-        redirectUrl: redirectUri,
-      });
-      if (createdSessionId) {
-        await setActive!({ session: createdSessionId });
+      const { createdSessionId, setActive } = await startAppleAuthenticationFlow();
+      if (createdSessionId && setActive) {
+        await setActive({ session: createdSessionId });
       }
-    } catch (error) {
+    } catch (error: any) {
+      if (error?.code === "ERR_REQUEST_CANCELED") {
+        // user cancelled; no-op
+        return;
+      }
       console.error("Apple Sign-In error:", error);
-      Alert.alert(
-        "Error",
-        error instanceof Error
-          ? error.message
-          : "Failed to sign in with Apple",
-      );
+      Alert.alert("Error", error?.message || "Failed to sign in with Apple");
     } finally {
       setIsLoading(false);
     }
@@ -108,7 +107,6 @@ export function GoogleSignIn() {
           disabled={isLoading}
           style={[styles.button, { marginTop: 8 }]}
           contentStyle={styles.buttonContent}
-          icon="apple"
         >
           Continue with Apple
         </Button>
