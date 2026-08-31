@@ -3,6 +3,7 @@ import { supabase } from "@/lib/supabase/client";
 import { apiClient } from "@/lib/api/client";
 import type { ProgramInput } from "@/lib/validations/program.schema";
 import { equipmentList } from "@/lib/constants/programConfig";
+import { useAuth } from "@/hooks/useAuth";
 
 // JSON field types for program data
 export type CalendarData = {
@@ -54,14 +55,11 @@ export type Program = {
 };
 
 export function usePrograms() {
+  const { dbUserId } = useAuth();
   return useQuery<Program[]>({
     queryKey: ["programs"],
     queryFn: async () => {
-      const {
-        data: { user },
-      } = await supabase.auth.getUser();
-
-      if (!user) {
+      if (!dbUserId) {
         throw new Error("Not authenticated");
       }
 
@@ -69,7 +67,7 @@ export function usePrograms() {
       const { data: entities, error: entitiesError } = await supabase
         .from("entities")
         .select("id")
-        .eq("user_id", user.id)
+        .eq("user_id", dbUserId)
         .is("deleted_at", null);
 
       if (entitiesError) throw entitiesError;
@@ -116,6 +114,7 @@ export function useProgram(id: string) {
 
 export function useCreateProgram() {
   const queryClient = useQueryClient();
+  const { dbUserId } = useAuth();
 
   return useMutation({
     mutationFn: async (data: ProgramInput | (ProgramInput & Record<string, any>)) => {
@@ -124,13 +123,9 @@ export function useCreateProgram() {
         data,
       );
 
-      const {
-        data: { user },
-      } = await supabase.auth.getUser();
+      console.log("[useCreateProgram] DB User:", dbUserId);
 
-      console.log("[useCreateProgram] User:", user?.id);
-
-      if (!user) {
+      if (!dbUserId) {
         throw new Error("Not authenticated");
       }
 

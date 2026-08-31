@@ -4,6 +4,12 @@ import { GestureHandlerRootView } from "react-native-gesture-handler";
 import { MD3LightTheme, PaperProvider } from "react-native-paper";
 import { AuthProvider } from "@/components/providers/AuthProvider";
 import { QueryProvider } from "@/components/providers/QueryProvider";
+import { ClerkProvider } from "@clerk/expo";
+import * as SecureStore from "expo-secure-store";
+import { setAuthTokenProvider } from "@/lib/auth/token";
+import { setSupabaseAuthTokenProvider } from "@/lib/supabase/client";
+import { useAuth as useClerkAuth } from "@clerk/expo";
+import { useEffect } from "react";
 
 // Brand colors from web app (halteres.ai)
 export const brandColors = {
@@ -116,21 +122,54 @@ const theme = {
   },
 };
 
+function ClerkBridges() {
+  const { getToken, isSignedIn } = useClerkAuth();
+  useEffect(() => {
+    // Provide tokens to Supabase and API client
+    const provider = async () => {
+      try {
+        // Prefer native session JWT (matches web); fallback to 'supabase' template
+        const token = await getToken();
+        if (token) return token;
+        return await getToken({ template: "supabase" } as any);
+      } catch {
+        return null;
+      }
+    };
+    setSupabaseAuthTokenProvider(provider);
+    setAuthTokenProvider(provider);
+  }, [getToken, isSignedIn]);
+  return null;
+}
+
 export default function RootLayout() {
+  const publishableKey = process.env.EXPO_PUBLIC_CLERK_PUBLISHABLE_KEY!;
+  const tokenCache = {
+    async getToken(key: string) {
+      return SecureStore.getItemAsync(key);
+    },
+    async saveToken(key: string, value: string) {
+      return SecureStore.setItemAsync(key, value);
+    },
+  };
+
   return (
     <GestureHandlerRootView style={{ flex: 1 }}>
-      <PaperProvider theme={theme}>
-        <QueryProvider>
-          <AuthProvider>
-            <Stack screenOptions={{ headerShown: false }}>
-              <Stack.Screen name="index" />
-              <Stack.Screen name="(auth)" />
-              <Stack.Screen name="(athlete)" />
-            </Stack>
-            <StatusBar style="dark" />
-          </AuthProvider>
-        </QueryProvider>
-      </PaperProvider>
+      <ClerkProvider publishableKey={publishableKey} tokenCache={tokenCache}>
+        <ClerkBridges />
+        <PaperProvider theme={theme}>
+          <QueryProvider>
+            <AuthProvider>
+              <Stack screenOptions={{ headerShown: false }}>
+                <Stack.Screen name="index" />
+                <Stack.Screen name="(auth)" />
+                <Stack.Screen name="(athlete)" />
+              </Stack>
+              <StatusBar style="dark" />
+            </AuthProvider>
+          </QueryProvider>
+        </PaperProvider>
+      </ClerkProvider>
     </GestureHandlerRootView>
   );
 }

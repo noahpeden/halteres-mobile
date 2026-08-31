@@ -44,16 +44,7 @@ export function SignupForm() {
     try {
       setIsLoading(true);
       await signUp(data.email, data.password);
-      Alert.alert(
-        "Success",
-        "Account created! Please check your email to confirm your account.",
-        [
-          {
-            text: "OK",
-            onPress: () => router.replace("/"),
-          },
-        ],
-      );
+      router.replace("/(auth)/verify");
     } catch (error: any) {
       Alert.alert("Error", error.message || "Failed to create account");
     } finally {

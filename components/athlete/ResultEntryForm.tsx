@@ -10,6 +10,7 @@ import {
 } from "react-native-paper";
 import { supabase } from "@/lib/supabase/client";
 import { brandColors } from "@/app/_layout";
+import { useAuth } from "@/hooks/useAuth";
 
 type ResultType = "time" | "rounds_reps" | "weight" | "reps" | "distance" | "calories";
 type Scale = "rx" | "scaled" | "rx_plus";
@@ -38,6 +39,7 @@ export default function ResultEntryForm({
   onCancel,
   defaultResultType = "time",
 }: Props) {
+  const { dbUserId } = useAuth();
   const [resultType, setResultType] = useState<ResultType>(defaultResultType);
   const [scale, setScale] = useState<Scale>("rx");
   const [loading, setLoading] = useState(false);
@@ -59,11 +61,10 @@ export default function ResultEntryForm({
     setError(null);
 
     try {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) throw new Error("Not authenticated");
+      if (!dbUserId) throw new Error("Not authenticated");
 
       const resultData: any = {
-        user_id: user.id,
+        user_id: dbUserId,
         workout_id: workoutId,
         gym_id: gymId || null,
         result_type: resultType,
@@ -120,7 +121,7 @@ export default function ResultEntryForm({
       const { data: previousResults } = await supabase
         .from("workout_results")
         .select("*")
-        .eq("user_id", user.id)
+        .eq("user_id", dbUserId)
         .eq("workout_id", workoutId)
         .eq("scale", scale)
         .neq("id", result.id)

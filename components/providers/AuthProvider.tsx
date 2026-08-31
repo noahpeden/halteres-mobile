@@ -1,4 +1,3 @@
-import type { Session, User } from "@supabase/supabase-js";
 import {
   createContext,
   type PropsWithChildren,
@@ -8,6 +7,7 @@ import {
   useState,
 } from "react";
 import { supabase } from "@/lib/supabase/client";
+import { useAuth as useClerkAuth, useSignIn, useSignUp, useUser } from "@clerk/expo";
 
 // Types
 type UserRole = "coach" | "athlete";
@@ -47,9 +47,14 @@ type AthleteMetrics = {
   injury_history: string | null;
 };
 
+type AppUser = {
+  id: string;
+  email: string | null;
+};
+
 type AuthContextType = {
-  user: User | null;
-  session: Session | null;
+  user: AppUser | null;
+  dbUserId: string | null;
   isLoading: boolean;
   signIn: (email: string, password: string) => Promise<void>;
   signUp: (email: string, password: string, role?: UserRole) => Promise<void>;
@@ -67,7 +72,7 @@ type AuthContextType = {
 
 export const AuthContext = createContext<AuthContextType>({
   user: null,
-  session: null,
+  dbUserId: null,
   isLoading: true,
   signIn: async () => {},
   signUp: async () => {},
@@ -81,124 +86,118 @@ export const AuthContext = createContext<AuthContextType>({
 });
 
 export function AuthProvider({ children }: PropsWithChildren) {
-  const [user, setUser] = useState<User | null>(null);
-  const [session, setSession] = useState<Session | null>(null);
-  const [isLoading, setIsLoading] = useState(true);
+  const { isLoaded: authLoaded, signOut: clerkSignOut } = useClerkAuth();
+  const { isLoaded: userLoaded, user: clerkUser } = useUser();
+  const { signIn, setActive: setActiveSignIn } = useSignIn();
+  const { signUp, setActive: setActiveSignUp } = useSignUp();
+
+  const [user, setUser] = useState<AppUser | null>(null);
+  const [dbUserId, setDbUserId] = useState<string | null>(null);
+  const isLoading = !authLoaded || !userLoaded;
   const [profile, setProfile] = useState<Profile | null>(null);
   const [loadingProfile, setLoadingProfile] = useState(true);
 
-  // Fetch profile
-  const fetchProfile = useCallback(async (userId: string) => {
-    if (!userId) {
+  // Fetch profile by id, falling back to email match for legacy users
+  const fetchProfile = useCallback(async (userId: string, email?: string | null) => {
+    if (!userId && !email) {
       setProfile(null);
       setLoadingProfile(false);
       return;
     }
     setLoadingProfile(true);
     try {
-      const { data, error } = await supabase
-        .from("profiles")
-        .select(
-          `subscription_status, trial_end_date, generations_remaining, last_generation_date,
-           role, display_name, full_name, profile_photo_url, notification_preferences,
-           onboarding_completed, bench_1rm, squat_1rm, deadlift_1rm, weight_kg, height_cm, mile_time,
-           gender, recovery_score, injury_history`
-        )
-        .eq("id", userId)
-        .single();
+      // Prefer email match to preserve UUID PK mapping
+      let data: any = null;
+      let error: any = null;
+      if (email) {
+        const byEmail = await supabase
+          .from("profiles")
+          .select(
+            `id, email, subscription_status, trial_end_date, generations_remaining, last_generation_date,
+             role, display_name, full_name, profile_photo_url, notification_preferences,
+             onboarding_completed, bench_1rm, squat_1rm, deadlift_1rm, weight_kg, height_cm, mile_time,
+             gender, recovery_score, injury_history`
+          )
+          .eq("email", email)
+          .maybeSingle();
+        data = byEmail.data as any;
+        error = byEmail.error as any;
+      }
+      // Fallback by id (for rare pre-mapped cases)
+      if (!data && userId) {
+        const byId = await supabase
+          .from("profiles")
+          .select(
+            `id, email, subscription_status, trial_end_date, generations_remaining, last_generation_date,
+             role, display_name, full_name, profile_photo_url, notification_preferences,
+             onboarding_completed, bench_1rm, squat_1rm, deadlift_1rm, weight_kg, height_cm, mile_time,
+             gender, recovery_score, injury_history`
+          )
+          .eq("id", userId)
+          .maybeSingle();
+        data = byId.data as any;
+        error = byId.error as any;
+      }
 
       if (error) {
-        if (error.code === "PGRST116") {
-          console.log("No profile found for user");
-          setProfile(null);
-        } else {
-          console.error("Error fetching profile:", error);
-          setProfile(null);
-        }
-      } else {
+        console.error("Error fetching profile:", error);
+        setProfile(null);
+        setDbUserId(null);
+      } else if (data) {
         setProfile(data as Profile);
+        setDbUserId(data.id as string);
+      } else {
+        setProfile(null);
+        setDbUserId(null);
       }
     } catch (error) {
       console.error("Unexpected error fetching profile:", error);
       setProfile(null);
+      setDbUserId(null);
     } finally {
       setLoadingProfile(false);
     }
   }, []);
 
+  // Build app user and fetch profile when Clerk user changes
   useEffect(() => {
-    // Get initial session
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      setSession(session);
-      setUser(session?.user ?? null);
-      setIsLoading(false);
+    if (!clerkUser) {
+      setUser(null);
+      setProfile(null);
+      setDbUserId(null);
+      setLoadingProfile(false);
+      return;
+    }
+    const appUser: AppUser = {
+      id: clerkUser.id,
+      email: clerkUser.primaryEmailAddress?.emailAddress ?? null,
+    };
+    setUser(appUser);
+    fetchProfile(appUser.id, appUser.email);
+  }, [clerkUser, fetchProfile]);
 
-      if (session?.user?.id) {
-        fetchProfile(session.user.id);
-      } else {
-        setLoadingProfile(false);
-      }
-    });
-
-    // Listen for auth changes
-    const {
-      data: { subscription },
-    } = supabase.auth.onAuthStateChange((_event, session) => {
-      setSession(session);
-      setUser(session?.user ?? null);
-      setIsLoading(false);
-
-      if (session?.user?.id) {
-        fetchProfile(session.user.id);
-      } else {
-        setProfile(null);
-        setLoadingProfile(false);
-      }
-    });
-
-    return () => subscription.unsubscribe();
-  }, [fetchProfile]);
-
-  const signIn = async (email: string, password: string) => {
-    const { error } = await supabase.auth.signInWithPassword({
-      email,
-      password,
-    });
-    if (error) throw error;
-  };
-
-  const signUp = async (
-    email: string,
-    password: string,
-    role: UserRole = "athlete"
-  ) => {
-    const { data, error } = await supabase.auth.signUp({
-      email,
-      password,
-      options: {
-        data: { role }, // Store role in user metadata for trigger
-      },
-    });
-    if (error) throw error;
-
-    if (data.user) {
-      // Check if profile was created by trigger
-      const { data: existingProfile } = await supabase
-        .from("profiles")
-        .select("id")
-        .eq("id", data.user.id)
-        .single();
-
-      if (!existingProfile) {
-        // Profile wasn't created by trigger - create fallback profile
-        console.log("Profile missing for user, creating fallback profile");
+  // Create fallback profile for newly registered users if none exists
+  useEffect(() => {
+    const maybeCreateProfile = async () => {
+      if (!user || loadingProfile) return;
+      if (profile) return;
+      // Create minimal active profile to match web behavior
+      try {
+        // Generate a UUID for the DB primary key (must remain UUID)
+        let newId: string;
+        try {
+          const Crypto = await import("expo-crypto");
+          // @ts-ignore
+          newId = (Crypto.randomUUID && Crypto.randomUUID()) || Math.random().toString(36).slice(2) + Date.now().toString(36);
+        } catch {
+          newId = Math.random().toString(36).slice(2) + Date.now().toString(36);
+        }
         const now = new Date();
         const trialEnd = new Date(now.getTime() + 7 * 24 * 60 * 60 * 1000);
-
-        // Every self-coached athlete gets a trial with generation credits
         const profileData = {
-          id: data.user.id,
-          role,
+          id: newId,
+          email: user.email,
+          role: "athlete" as UserRole,
           subscription_status: "trialing",
           trial_start_date: now.toISOString(),
           trial_end_date: trialEnd.toISOString(),
@@ -207,29 +206,53 @@ export function AuthProvider({ children }: PropsWithChildren) {
           is_active: true,
           onboarding_completed: false,
         };
-
-        const { error: insertError } = await supabase
-          .from("profiles")
-          .insert([profileData]);
-
-        if (insertError) {
-          console.error("Error creating fallback profile:", insertError);
-        } else {
-          console.log("Fallback profile created for role:", role);
-        }
-      } else {
-        // Profile exists, just update the role if needed
-        await supabase
-          .from("profiles")
-          .update({ role })
-          .eq("id", data.user.id);
+        await supabase.from("profiles").insert([profileData as any]);
+        await fetchProfile(user.id, user.email);
+      } catch (e) {
+        // Non-fatal
+        // console.warn("Failed to create fallback profile:", e);
       }
+    };
+    void maybeCreateProfile();
+  }, [user, profile, loadingProfile, fetchProfile]);
+
+  const signIn = async (email: string, password: string) => {
+    if (!signIn) throw new Error("Auth not ready");
+    const res = await signIn.create({
+      identifier: email,
+      password,
+    });
+    // Complete the password factor
+    const attempt = await signIn.attemptFirstFactor({
+      strategy: "password",
+      password,
+    });
+    if (attempt.status === "complete") {
+      await setActiveSignIn!({ session: attempt.createdSessionId });
+      return;
     }
+    throw new Error("Failed to sign in");
+  };
+
+  const signUp = async (
+    email: string,
+    password: string,
+    role: UserRole = "athlete"
+  ) => {
+    if (!signUp) throw new Error("Auth not ready");
+    // Create Clerk user and send email code
+    await signUp.create({
+      emailAddress: email,
+      password,
+    });
+    // Prepare email code verification
+    await signUp.prepareEmailAddressVerification({ strategy: "email_code" });
   };
 
   const signOut = async () => {
-    const { error } = await supabase.auth.signOut();
-    if (error) throw error;
+    await clerkSignOut();
+    setProfile(null);
+    setUser(null);
   };
 
   // Derived values
@@ -238,7 +261,7 @@ export function AuthProvider({ children }: PropsWithChildren) {
   const contextValue = useMemo(
     () => ({
       user,
-      session,
+      dbUserId,
       isLoading,
       signIn,
       signUp,
@@ -247,7 +270,7 @@ export function AuthProvider({ children }: PropsWithChildren) {
       profile,
       loadingProfile,
       refetchProfile: () =>
-        user?.id ? fetchProfile(user.id) : Promise.resolve(),
+        user?.id ? fetchProfile(user.id, user.email) : Promise.resolve(),
       // Role
       role: (profile?.role || "athlete") as UserRole,
       isAthlete,
@@ -264,7 +287,7 @@ export function AuthProvider({ children }: PropsWithChildren) {
         injury_history: profile?.injury_history ?? null,
       },
     }),
-    [user, session, isLoading, profile, loadingProfile, fetchProfile, isAthlete]
+    [user, dbUserId, isLoading, profile, loadingProfile, fetchProfile, isAthlete]
   );
 
   return (

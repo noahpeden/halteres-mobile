@@ -54,13 +54,7 @@ type Stats = {
 
 export default function ProfileScreen() {
   const router = useRouter();
-  const {
-    user,
-    profile,
-    athleteMetrics,
-    signOut,
-    refetchProfile,
-  } = useContext(AuthContext);
+  const { user, dbUserId, profile, athleteMetrics, signOut, refetchProfile } = useContext(AuthContext);
 
   const { updateProfile, loading: savingProfile } = useAthleteProfile();
 
@@ -94,7 +88,7 @@ export default function ProfileScreen() {
     .slice(0, 2);
 
   const fetchProfileData = useCallback(async () => {
-    if (!user?.id) {
+    if (!dbUserId) {
       setLoading(false);
       return;
     }
@@ -104,7 +98,7 @@ export default function ProfileScreen() {
       const { data: prsData, error: prsError } = await supabase
         .from("personal_records")
         .select("*")
-        .eq("user_id", user.id)
+        .eq("user_id", dbUserId)
         .order("achieved_at", { ascending: false });
 
       if (prsError) throw prsError;
@@ -119,14 +113,14 @@ export default function ProfileScreen() {
       const { count: totalWorkouts } = await supabase
         .from("workout_results")
         .select("*", { count: "exact", head: true })
-        .eq("user_id", user.id)
+        .eq("user_id", dbUserId)
         .is("deleted_at", null);
 
       // Get first workout date
       const { data: firstWorkout } = await supabase
         .from("workout_results")
         .select("created_at")
-        .eq("user_id", user.id)
+        .eq("user_id", dbUserId)
         .is("deleted_at", null)
         .order("created_at", { ascending: true })
         .limit(1)
@@ -149,7 +143,7 @@ export default function ProfileScreen() {
       setLoading(false);
       setRefreshing(false);
     }
-  }, [user?.id]);
+  }, [dbUserId]);
 
   useEffect(() => {
     fetchProfileData();

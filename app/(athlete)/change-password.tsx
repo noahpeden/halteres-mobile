@@ -21,8 +21,8 @@ import {
 } from "react-native-paper";
 import { ArrowLeft, Eye, EyeOff, Lock, Shield } from "lucide-react-native";
 import { z } from "zod";
-import { supabase } from "@/lib/supabase/client";
 import { brandColors } from "@/app/_layout";
+import { useUser as useClerkUser } from "@clerk/expo";
 
 const changePasswordSchema = z
   .object({
@@ -44,6 +44,7 @@ type ChangePasswordInput = z.infer<typeof changePasswordSchema>;
 
 export default function ChangePasswordScreen() {
   const router = useRouter();
+  const { user: clerkUser } = useClerkUser();
   const [isLoading, setIsLoading] = useState(false);
   const [showCurrentPassword, setShowCurrentPassword] = useState(false);
   const [showNewPassword, setShowNewPassword] = useState(false);
@@ -66,31 +67,13 @@ export default function ChangePasswordScreen() {
   const onSubmit = async (data: ChangePasswordInput) => {
     try {
       setIsLoading(true);
-
-      // First, verify the current password by re-authenticating
-      const { data: userData } = await supabase.auth.getUser();
-      if (!userData?.user?.email) {
-        throw new Error("Unable to verify user");
-      }
-
-      // Try to sign in with current password to verify it
-      const { error: signInError } = await supabase.auth.signInWithPassword({
-        email: userData.user.email,
-        password: data.currentPassword,
+      if (!clerkUser) throw new Error("Not signed in");
+      // Update password via Clerk
+      // @ts-expect-error: Clerk Expo user supports updatePassword
+      await clerkUser.updatePassword({
+        newPassword: data.newPassword,
+        currentPassword: data.currentPassword,
       });
-
-      if (signInError) {
-        throw new Error("Current password is incorrect");
-      }
-
-      // Update to new password
-      const { error: updateError } = await supabase.auth.updateUser({
-        password: data.newPassword,
-      });
-
-      if (updateError) {
-        throw updateError;
-      }
 
       Alert.alert(
         "Password Changed",

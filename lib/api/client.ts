@@ -1,18 +1,15 @@
-import { supabase } from "@/lib/supabase/client";
 import { API_BASE } from "@/lib/api/getApiUrl";
+import { getAuthToken } from "@/lib/auth/token";
 
 export class ApiClient {
   private async getAuthHeader(): Promise<HeadersInit> {
-    const {
-      data: { session },
-    } = await supabase.auth.getSession();
-
-    if (!session?.access_token) {
+    const token = await getAuthToken();
+    if (!token) {
       throw new Error("No authentication token");
     }
 
     return {
-      Authorization: `Bearer ${session.access_token}`,
+      Authorization: `Bearer ${token}`,
       "Content-Type": "application/json",
     };
   }

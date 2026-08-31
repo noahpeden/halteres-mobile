@@ -50,7 +50,7 @@ const FILTERS: { value: Filter; label: string }[] = [
 ];
 
 export default function HistoryScreen() {
-  const { user } = useContext(AuthContext);
+  const { dbUserId } = useContext(AuthContext);
   const router = useRouter();
   const [results, setResults] = useState<Result[]>([]);
   const [loading, setLoading] = useState(true);
@@ -58,7 +58,7 @@ export default function HistoryScreen() {
   const [filter, setFilter] = useState<Filter>("all");
 
   const fetchHistory = useCallback(async () => {
-    if (!user?.id) {
+    if (!dbUserId) {
       setLoading(false);
       return;
     }
@@ -71,7 +71,7 @@ export default function HistoryScreen() {
           weight_kg, count, scale, is_pr, notes, created_at,
           workout:program_workouts (title)
         `)
-        .eq("user_id", user.id)
+        .eq("user_id", dbUserId)
         .is("deleted_at", null)
         .order("created_at", { ascending: false });
 
@@ -89,7 +89,7 @@ export default function HistoryScreen() {
       setLoading(false);
       setRefreshing(false);
     }
-  }, [user?.id]);
+  }, [dbUserId]);
 
   useEffect(() => {
     fetchHistory();
