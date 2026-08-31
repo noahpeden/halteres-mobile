@@ -1,15 +1,19 @@
-import { useState } from "react";
-import { RefreshControl, ScrollView, StyleSheet, TouchableOpacity, View } from "react-native";
-import { ActivityIndicator, Button, Card, Text, useTheme } from "react-native-paper";
-import { SafeAreaView } from "react-native-safe-area-context";
 import { useRouter } from "expo-router";
-import { FileText, Plus } from "lucide-react-native";
+import { PenLine } from "lucide-react-native";
+import { useState } from "react";
+import { RefreshControl, ScrollView, StyleSheet, View } from "react-native";
+import { ActivityIndicator } from "react-native-paper";
 import { ProgramCard } from "@/components/dashboard/ProgramCard";
+import { TAB_BAR_CLEARANCE } from "@/components/navigation/AthleteTabBar";
+import { AppText } from "@/components/ui/AppText";
+import { HButton } from "@/components/ui/HButton";
+import { HCard } from "@/components/ui/HCard";
+import { Screen } from "@/components/ui/Screen";
 import { usePrograms } from "@/hooks/usePrograms";
+import { palette } from "@/lib/theme";
 
 export default function AthleteProgramsScreen() {
   const router = useRouter();
-  const theme = useTheme();
   const { data: programs, isLoading, refetch } = usePrograms();
   const [refreshing, setRefreshing] = useState(false);
 
@@ -24,80 +28,80 @@ export default function AthleteProgramsScreen() {
   };
 
   return (
-    <SafeAreaView style={[styles.container, { backgroundColor: theme.colors.background }]}>
-      <View style={[styles.header, { borderColor: theme.colors.outlineVariant }]}>
-        <View style={styles.headerContent}>
-          <View>
-            <Text variant="headlineMedium" style={styles.headerTitle}>
-              My Programs
-            </Text>
-            <Text variant="bodyMedium" style={{ color: theme.colors.onSurfaceVariant }}>
-              {programs?.length || 0} total
-            </Text>
-          </View>
-          <TouchableOpacity onPress={handleCreateProgram}>
-            <View style={[styles.addButton, { backgroundColor: theme.colors.primary }]}>
-              <Plus size={20} color="#ffffff" />
-            </View>
-          </TouchableOpacity>
-        </View>
+    <Screen>
+      <View style={styles.header}>
+        <AppText variant="eyebrow">Your notebook</AppText>
+        <AppText variant="display" style={styles.title}>
+          Programs
+        </AppText>
+        <AppText variant="italic">
+          {programs?.length
+            ? `${programs.length} block${programs.length === 1 ? "" : "s"} in ink.`
+            : "Write the next block. Length is yours — one week or a full season."}
+        </AppText>
       </View>
 
       <ScrollView
-        style={styles.scrollView}
-        contentContainerStyle={styles.scrollContent}
-        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={theme.colors.primary} />}
+        contentContainerStyle={styles.scroll}
+        refreshControl={
+          <RefreshControl
+            refreshing={refreshing}
+            onRefresh={onRefresh}
+            tintColor={palette.blue}
+          />
+        }
+        showsVerticalScrollIndicator={false}
       >
-        <View style={styles.content}>
-          {isLoading ? (
-            <View style={styles.loadingContainer}>
-              <ActivityIndicator size="large" color={theme.colors.primary} />
+        <HButton
+          label="Write a program"
+          tone="orange"
+          icon={<PenLine size={16} color={palette.white} />}
+          onPress={handleCreateProgram}
+        />
+
+        {isLoading ? (
+          <View style={styles.loading}>
+            <ActivityIndicator size="large" color={palette.blue} />
+          </View>
+        ) : programs && programs.length > 0 ? (
+          <View style={styles.list}>
+            {programs.map((program) => (
+              <ProgramCard key={program.id} program={program} />
+            ))}
+          </View>
+        ) : (
+          <HCard accent="orange">
+            <AppText variant="title">A blank page.</AppText>
+            <AppText variant="body" style={{ marginTop: 8 }}>
+              Name a block, pick your days, generate the sessions. Edit any day.
+              No coach in the loop.
+            </AppText>
+            <View style={{ marginTop: 16 }}>
+              <HButton
+                label="Start the first one"
+                tone="ink"
+                onPress={handleCreateProgram}
+              />
             </View>
-          ) : programs && programs.length > 0 ? (
-            programs.map((program) => <ProgramCard key={program.id} program={program} />)
-          ) : (
-            <Card style={styles.card}>
-              <Card.Content style={styles.emptyStateContent}>
-                <FileText size={64} color={theme.colors.outline} />
-                <Text variant="titleLarge" style={styles.emptyStateTitle}>
-                  No Programs Yet
-                </Text>
-                <Text
-                  variant="bodyMedium"
-                  style={[styles.emptyStateDescription, { color: theme.colors.onSurfaceVariant }]}
-                >
-                  Create your first AI-powered training program to start tracking your own workouts.
-                </Text>
-                <Button
-                  mode="contained"
-                  onPress={handleCreateProgram}
-                  icon={({ size, color }) => <Plus size={size} color={color} />}
-                  style={styles.createButton}
-                >
-                  Create Your First Program
-                </Button>
-              </Card.Content>
-            </Card>
-          )}
-        </View>
+          </HCard>
+        )}
       </ScrollView>
-    </SafeAreaView>
+    </Screen>
   );
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1 },
-  header: { paddingHorizontal: 24, paddingVertical: 16, borderBottomWidth: 1 },
-  headerContent: { flexDirection: "row", alignItems: "center", justifyContent: "space-between" },
-  headerTitle: { fontWeight: "bold" },
-  addButton: { padding: 12, borderRadius: 50 },
-  scrollView: { flex: 1 },
-  scrollContent: { paddingHorizontal: 24 },
-  content: { paddingVertical: 16 },
-  loadingContainer: { alignItems: "center", paddingVertical: 48 },
-  card: { marginTop: 32, backgroundColor: "white" },
-  emptyStateContent: { padding: 32, alignItems: "center" },
-  emptyStateTitle: { marginTop: 16, marginBottom: 8, fontWeight: "600" },
-  emptyStateDescription: { textAlign: "center", marginBottom: 24 },
-  createButton: { width: "100%" },
+  header: {
+    paddingHorizontal: 22,
+    paddingTop: 8,
+    paddingBottom: 12,
+  },
+  title: { marginTop: 6, marginBottom: 6 },
+  scroll: {
+    paddingHorizontal: 22,
+    paddingBottom: TAB_BAR_CLEARANCE,
+    gap: 16,
+  },
+  loading: { alignItems: "center", paddingVertical: 48 },
+  list: { gap: 4 },
 });

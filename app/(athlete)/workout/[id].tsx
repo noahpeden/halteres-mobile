@@ -1,31 +1,38 @@
-import { useState, useEffect, useContext, useCallback, useMemo } from "react";
+import { useLocalSearchParams, useRouter } from "expo-router";
+import { ChevronLeft } from "lucide-react-native";
+import { useCallback, useContext, useEffect, useMemo, useState } from "react";
 import {
-  View,
-  StyleSheet,
-  ScrollView,
   RefreshControl,
+  ScrollView,
+  StyleSheet,
   TouchableOpacity,
+  View,
 } from "react-native";
 import {
-  Text,
-  Surface,
   ActivityIndicator,
-  Chip,
   Button,
+  Chip,
   IconButton,
+  Surface,
+  Text,
 } from "react-native-paper";
-import { useLocalSearchParams, useRouter } from "expo-router";
 import { SafeAreaView } from "react-native-safe-area-context";
-import { ChevronLeft } from "lucide-react-native";
-import { supabase } from "@/lib/supabase/client";
-import { AuthContext } from "@/components/providers/AuthProvider";
-import { brandColors } from "@/app/_layout";
-import { API_BASE } from "@/lib/api/getApiUrl";
-import ResultEntryForm from "@/components/athlete/ResultEntryForm";
-import PRCelebration from "@/components/athlete/PRCelebration";
 import AIFeedbackCard from "@/components/athlete/AIFeedbackCard";
-import { TemplateFeedbackButton, ResultFeedbackCard } from "@/components/feedback";
-import { SectionButtons, TVDisplayMode, useTVDisplay } from "@/components/tv-display";
+import PRCelebration from "@/components/athlete/PRCelebration";
+import ResultEntryForm from "@/components/athlete/ResultEntryForm";
+import {
+  ResultFeedbackCard,
+  TemplateFeedbackButton,
+} from "@/components/feedback";
+import { AuthContext } from "@/components/providers/AuthProvider";
+import {
+  SectionButtons,
+  TVDisplayMode,
+  useTVDisplay,
+} from "@/components/tv-display";
+import { API_BASE } from "@/lib/api/getApiUrl";
+import { supabase } from "@/lib/supabase/client";
+import { palette } from "@/lib/theme";
 import { parseMarkdownContent } from "@/lib/utils/markdownParser";
 import { parseWorkoutSections } from "@/lib/utils/workoutParser";
 
@@ -72,7 +79,7 @@ export default function WorkoutDetailScreen() {
   // TV Display Mode - Parse sections from workout description
   const sections = useMemo(
     () => parseWorkoutSections(workout?.body),
-    [workout?.body]
+    [workout?.body],
   );
   const tvDisplay = useTVDisplay(sections);
 
@@ -129,11 +136,12 @@ export default function WorkoutDetailScreen() {
 
   const formatResult = (result: any): string => {
     switch (result.result_type) {
-      case "time":
+      case "time": {
         if (!result.time_seconds) return "-";
         const mins = Math.floor(result.time_seconds / 60);
         const secs = result.time_seconds % 60;
         return `${mins}:${secs.toString().padStart(2, "0")}`;
+      }
       case "rounds_reps":
         return `${result.rounds || 0} + ${result.reps || 0}`;
       case "weight":
@@ -143,7 +151,9 @@ export default function WorkoutDetailScreen() {
     }
   };
 
-  const getDefaultResultType = (workoutType: string | null | undefined): string => {
+  const getDefaultResultType = (
+    workoutType: string | null | undefined,
+  ): string => {
     switch (workoutType?.toLowerCase()) {
       case "amrap":
         return "rounds_reps";
@@ -158,7 +168,11 @@ export default function WorkoutDetailScreen() {
     }
   };
 
-  const handleResultSuccess = async (result: any, isPR: boolean, prInfo: any) => {
+  const handleResultSuccess = async (
+    result: any,
+    isPR: boolean,
+    prInfo: any,
+  ) => {
     setUserResult({
       ...result,
       displayValue: formatResult(result),
@@ -172,8 +186,8 @@ export default function WorkoutDetailScreen() {
     // Auto-trigger AI feedback generation in the background
     try {
       fetch(`${API_BASE}/api/ai-feedback`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           workoutResultId: result.id,
           userId: user?.id,
@@ -182,14 +196,13 @@ export default function WorkoutDetailScreen() {
     } catch (e) {
       // Silently fail - feedback generation is non-critical
     }
-
   };
 
   if (loading) {
     return (
       <SafeAreaView style={styles.container}>
         <View style={styles.loadingContainer}>
-          <ActivityIndicator size="large" color={brandColors.smartBlue.DEFAULT} />
+          <ActivityIndicator size="large" color={palette.blue} />
         </View>
       </SafeAreaView>
     );
@@ -199,7 +212,10 @@ export default function WorkoutDetailScreen() {
     return (
       <SafeAreaView style={styles.container}>
         <View style={styles.header}>
-          <TouchableOpacity onPress={() => router.back()} style={styles.backButton}>
+          <TouchableOpacity
+            onPress={() => router.back()}
+            style={styles.backButton}
+          >
             <ChevronLeft color="#000" size={24} />
           </TouchableOpacity>
         </View>
@@ -230,11 +246,18 @@ export default function WorkoutDetailScreen() {
       {/* Header */}
       <Surface style={styles.headerSurface} elevation={2}>
         <View style={styles.headerContent}>
-          <TouchableOpacity onPress={() => router.back()} style={styles.backButton}>
-            <ChevronLeft color={brandColors.smartBlue.DEFAULT} size={24} />
+          <TouchableOpacity
+            onPress={() => router.back()}
+            style={styles.backButton}
+          >
+            <ChevronLeft color={palette.ink} size={24} />
           </TouchableOpacity>
           <View style={styles.headerText}>
-            <Text variant="titleLarge" style={styles.workoutTitle} numberOfLines={1}>
+            <Text
+              variant="titleLarge"
+              style={styles.workoutTitle}
+              numberOfLines={1}
+            >
               {workout.title}
             </Text>
             <View style={styles.headerMeta}>
@@ -260,7 +283,10 @@ export default function WorkoutDetailScreen() {
           style={[styles.tab, activeTab === "workout" && styles.activeTab]}
         >
           <Text
-            style={[styles.tabText, activeTab === "workout" && styles.activeTabText]}
+            style={[
+              styles.tabText,
+              activeTab === "workout" && styles.activeTabText,
+            ]}
           >
             Workout
           </Text>
@@ -269,7 +295,12 @@ export default function WorkoutDetailScreen() {
           onPress={() => setActiveTab("log")}
           style={[styles.tab, activeTab === "log" && styles.activeTab]}
         >
-          <Text style={[styles.tabText, activeTab === "log" && styles.activeTabText]}>
+          <Text
+            style={[
+              styles.tabText,
+              activeTab === "log" && styles.activeTabText,
+            ]}
+          >
             {userResult ? "Edit Result" : "Log Result"}
           </Text>
         </TouchableOpacity>
@@ -289,17 +320,17 @@ export default function WorkoutDetailScreen() {
               Description
             </Text>
             <View style={styles.descriptionContainer}>
-              {workout.body
-                ? parseMarkdownContent(workout.body)
-                : <Text variant="bodyMedium" style={styles.description}>No description provided.</Text>
-              }
+              {workout.body ? (
+                parseMarkdownContent(workout.body)
+              ) : (
+                <Text variant="bodyMedium" style={styles.description}>
+                  No description provided.
+                </Text>
+              )}
             </View>
             {/* Template Feedback */}
             <View style={styles.templateFeedbackContainer}>
-            <TemplateFeedbackButton
-                workoutId={id || ""}
-                showStats
-              />
+              <TemplateFeedbackButton workoutId={id || ""} showStats />
             </View>
 
             {/* TV Display Section Buttons */}
@@ -370,8 +401,9 @@ export default function WorkoutDetailScreen() {
               onPress={() => setActiveTab("log")}
               style={styles.logButton}
               labelStyle={styles.logButtonLabel}
+              buttonColor={palette.blue}
             >
-              Log Your Result
+              Log it
             </Button>
           )}
 
@@ -387,7 +419,9 @@ export default function WorkoutDetailScreen() {
             workoutTitle={workout.title}
             onSuccess={handleResultSuccess}
             onCancel={() => setActiveTab("workout")}
-            defaultResultType={getDefaultResultType(workout.workout_type) as any}
+            defaultResultType={
+              getDefaultResultType(workout.workout_type) as any
+            }
           />
         </View>
       )}
@@ -411,7 +445,7 @@ export default function WorkoutDetailScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: "#f5f5f5",
+    backgroundColor: palette.paper,
   },
   loadingContainer: {
     flex: 1,
@@ -439,7 +473,7 @@ const styles = StyleSheet.create({
     padding: 12,
   },
   headerSurface: {
-    backgroundColor: "#fff",
+    backgroundColor: palette.paperElevated,
   },
   headerContent: {
     flexDirection: "row",
@@ -464,16 +498,16 @@ const styles = StyleSheet.create({
   },
   typeChip: {
     height: 24,
-    backgroundColor: brandColors.smartBlue.container,
+    backgroundColor: palette.blueWash,
   },
   programName: {
     opacity: 0.6,
   },
   tabContainer: {
     flexDirection: "row",
-    backgroundColor: "#fff",
+    backgroundColor: palette.paperElevated,
     borderBottomWidth: 1,
-    borderBottomColor: "#e0e0e0",
+    borderBottomColor: palette.rule,
   },
   tab: {
     flex: 1,
@@ -483,7 +517,7 @@ const styles = StyleSheet.create({
     borderBottomColor: "transparent",
   },
   activeTab: {
-    borderBottomColor: brandColors.smartBlue.DEFAULT,
+    borderBottomColor: palette.blue,
   },
   tabText: {
     fontSize: 14,
@@ -491,7 +525,7 @@ const styles = StyleSheet.create({
     color: "#666",
   },
   activeTabText: {
-    color: brandColors.smartBlue.DEFAULT,
+    color: palette.blue,
     fontWeight: "600",
   },
   content: {
@@ -499,8 +533,8 @@ const styles = StyleSheet.create({
     padding: 16,
   },
   card: {
-    backgroundColor: "#fff",
-    borderRadius: 12,
+    backgroundColor: palette.paperElevated,
+    borderRadius: 22,
     padding: 16,
     marginBottom: 16,
   },
@@ -533,7 +567,7 @@ const styles = StyleSheet.create({
   },
   exerciseIndicator: {
     width: 4,
-    backgroundColor: brandColors.smartBlue.DEFAULT,
+    backgroundColor: palette.blue,
     borderRadius: 2,
     marginRight: 12,
   },
@@ -552,12 +586,12 @@ const styles = StyleSheet.create({
     marginTop: 2,
   },
   resultCard: {
-    backgroundColor: brandColors.thrivingGreen.container,
-    borderRadius: 12,
+    backgroundColor: palette.greenWash,
+    borderRadius: 22,
     padding: 16,
     marginBottom: 16,
     borderWidth: 1,
-    borderColor: brandColors.thrivingGreen.DEFAULT,
+    borderColor: palette.green,
   },
   resultHeader: {
     flexDirection: "row",
@@ -566,7 +600,7 @@ const styles = StyleSheet.create({
     marginBottom: 8,
   },
   resultTitle: {
-    color: brandColors.thrivingGreen.DEFAULT,
+    color: palette.green,
     fontWeight: "600",
   },
   scaleChip: {
@@ -599,7 +633,7 @@ const styles = StyleSheet.create({
   },
   editButton: {
     marginTop: 12,
-    borderColor: brandColors.thrivingGreen.DEFAULT,
+    borderColor: palette.green,
   },
   feedbackContainer: {
     marginBottom: 16,
@@ -613,7 +647,7 @@ const styles = StyleSheet.create({
     fontWeight: "600",
   },
   bottomSpacer: {
-    height: 24,
+    height: 120,
   },
   formContainer: {
     flex: 1,

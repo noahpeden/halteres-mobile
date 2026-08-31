@@ -60,8 +60,8 @@ export function ProgramScheduling({
           Scheduling
         </Text>
         <Text variant="bodySmall" style={styles.sectionSubtitle}>
-          Choose the length of your program and the days of the week you'll have
-          sessions on.
+          Length is yours — one week or a full season. Pick the days you
+          actually train.
         </Text>
 
         {/* Days of Week Selector */}

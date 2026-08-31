@@ -2,11 +2,14 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { router } from "expo-router";
 import { useState } from "react";
 import { Controller, useForm } from "react-hook-form";
-import { Alert, StyleSheet, View } from "react-native";
-import { Button, HelperText, TextInput } from "react-native-paper";
+import { Alert, Pressable, StyleSheet, View } from "react-native";
+import { HelperText, TextInput } from "react-native-paper";
 import { z } from "zod";
 import { GoogleSignIn } from "@/components/auth/GoogleSignIn";
+import { AppText } from "@/components/ui/AppText";
+import { HButton } from "@/components/ui/HButton";
 import { useAuth } from "@/hooks/useAuth";
+import { palette } from "@/lib/theme";
 
 const loginSchema = z.object({
   email: z.string().email("Invalid email address"),
@@ -25,10 +28,7 @@ export function LoginForm() {
     formState: { errors },
   } = useForm<LoginInput>({
     resolver: zodResolver(loginSchema),
-    defaultValues: {
-      email: "",
-      password: "",
-    },
+    defaultValues: { email: "", password: "" },
   });
 
   const onSubmit = async (data: LoginInput) => {
@@ -36,15 +36,13 @@ export function LoginForm() {
       setIsLoading(true);
       await signIn(data.email, data.password);
       router.replace("/");
-    } catch (error: any) {
-      Alert.alert("Error", error.message || "Failed to sign in");
+    } catch (error: unknown) {
+      const message =
+        error instanceof Error ? error.message : "Failed to sign in";
+      Alert.alert("Error", message);
     } finally {
       setIsLoading(false);
     }
-  };
-
-  const handleForgotPassword = () => {
-    router.push("/(auth)/reset");
   };
 
   return (
@@ -53,10 +51,10 @@ export function LoginForm() {
         control={control}
         name="email"
         render={({ field: { onChange, onBlur, value } }) => (
-          <View style={styles.inputContainer}>
+          <View>
             <TextInput
               label="Email"
-              placeholder="email@example.com"
+              placeholder="you@example.com"
               value={value}
               onChangeText={onChange}
               onBlur={onBlur}
@@ -78,10 +76,10 @@ export function LoginForm() {
         control={control}
         name="password"
         render={({ field: { onChange, onBlur, value } }) => (
-          <View style={styles.inputContainer}>
+          <View>
             <TextInput
               label="Password"
-              placeholder="Enter your password"
+              placeholder="Your password"
               value={value}
               onChangeText={onChange}
               onBlur={onBlur}
@@ -94,52 +92,31 @@ export function LoginForm() {
             <HelperText type="error" visible={!!errors.password}>
               {errors.password?.message}
             </HelperText>
-            <Button
-              mode="text"
-              onPress={handleForgotPassword}
-              compact
-              style={styles.forgotButton}
+            <Pressable
+              onPress={() => router.push("/(auth)/reset")}
+              style={styles.forgot}
             >
-              Forgot password?
-            </Button>
+              <AppText variant="label" color={palette.blue}>
+                Forgot password?
+              </AppText>
+            </Pressable>
           </View>
         )}
       />
 
-      <Button
-        mode="contained"
+      <HButton
+        label="Sign in"
         onPress={handleSubmit(onSubmit)}
         loading={isLoading}
-        disabled={isLoading}
-        style={styles.button}
-        contentStyle={styles.buttonContent}
-      >
-        Sign In
-      </Button>
-
+        tone="ink"
+      />
       <GoogleSignIn />
     </View>
   );
 }
 
 const styles = StyleSheet.create({
-  container: {
-    gap: 8,
-  },
-  inputContainer: {
-    marginBottom: 8,
-  },
-  input: {
-    backgroundColor: "transparent",
-  },
-  button: {
-    marginTop: 8,
-  },
-  buttonContent: {
-    paddingVertical: 6,
-  },
-  forgotButton: {
-    alignSelf: "flex-end",
-    marginTop: 4,
-  },
+  container: { gap: 4 },
+  input: { backgroundColor: palette.paperElevated },
+  forgot: { alignSelf: "flex-end", marginBottom: 12, marginTop: -4 },
 });

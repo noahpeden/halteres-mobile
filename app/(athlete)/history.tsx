@@ -1,18 +1,16 @@
-import { useState, useEffect, useContext, useCallback } from "react";
-import {
-  View,
-  StyleSheet,
-  FlatList,
-  TouchableOpacity,
-  RefreshControl,
-} from "react-native";
-import { Text, Surface, Chip, ActivityIndicator } from "react-native-paper";
-import { SafeAreaView } from "react-native-safe-area-context";
 import { useRouter } from "expo-router";
-import { Clock, ChevronRight } from "lucide-react-native";
-import { supabase } from "@/lib/supabase/client";
+import { ChevronRight } from "lucide-react-native";
+import { useCallback, useContext, useEffect, useState } from "react";
+import { FlatList, RefreshControl, StyleSheet, View } from "react-native";
+import { ActivityIndicator } from "react-native-paper";
+import { TAB_BAR_CLEARANCE } from "@/components/navigation/AthleteTabBar";
 import { AuthContext } from "@/components/providers/AuthProvider";
-import { brandColors } from "@/app/_layout";
+import { AppText } from "@/components/ui/AppText";
+import { HCard } from "@/components/ui/HCard";
+import { Pill } from "@/components/ui/Pill";
+import { Screen } from "@/components/ui/Screen";
+import { supabase } from "@/lib/supabase/client";
+import { palette } from "@/lib/theme";
 
 type Filter = "all" | "prs" | "time" | "rounds_reps" | "weight";
 
@@ -29,9 +27,7 @@ type Result = {
   is_pr: boolean;
   notes: string | null;
   created_at: string;
-  workout: {
-    title: string;
-  } | null;
+  workout: { title: string } | null;
   displayValue: string;
 };
 
@@ -76,13 +72,12 @@ export default function HistoryScreen() {
         .order("created_at", { ascending: false });
 
       if (error) throw error;
-
-      const formattedResults = (data || []).map((result) => ({
-        ...result,
-        displayValue: formatResult(result),
-      }));
-
-      setResults(formattedResults);
+      setResults(
+        (data || []).map((result) => ({
+          ...result,
+          displayValue: formatResult(result),
+        })),
+      );
     } catch (err) {
       console.error("Error fetching history:", err);
     } finally {
@@ -95,35 +90,12 @@ export default function HistoryScreen() {
     fetchHistory();
   }, [fetchHistory]);
 
-  const formatResult = (result: any): string => {
-    switch (result.result_type) {
-      case "time":
-        if (!result.time_seconds) return "-";
-        const mins = Math.floor(result.time_seconds / 60);
-        const secs = result.time_seconds % 60;
-        return `${mins}:${secs.toString().padStart(2, "0")}`;
-      case "rounds_reps":
-        return `${result.rounds || 0} + ${result.reps || 0}`;
-      case "weight":
-        return `${result.weight_kg || 0} kg`;
-      default:
-        return `${result.count || 0}`;
-    }
-  };
-
-  const handleRefresh = () => {
-    setRefreshing(true);
-    fetchHistory();
-  };
-
-  // Filter results
   const filteredResults = results.filter((r) => {
     if (filter === "all") return true;
     if (filter === "prs") return r.is_pr;
     return r.result_type === filter;
   });
 
-  // Group by month
   const groupedResults: MonthGroup[] = Object.values(
     filteredResults.reduce((acc: Record<string, MonthGroup>, result) => {
       const date = new Date(result.created_at);
@@ -132,95 +104,39 @@ export default function HistoryScreen() {
         month: "long",
         year: "numeric",
       });
-
       if (!acc[monthKey]) {
         acc[monthKey] = { monthKey, label: monthLabel, results: [] };
       }
       acc[monthKey].results.push(result);
       return acc;
-    }, {})
+    }, {}),
   ).sort((a, b) => b.monthKey.localeCompare(a.monthKey));
-
-  const navigateToWorkout = (workoutId: string) => {
-    router.push(`/(athlete)/workout/${workoutId}`);
-  };
-
-  const renderResultCard = ({ item }: { item: Result }) => (
-    <TouchableOpacity
-      onPress={() => navigateToWorkout(item.workout_id)}
-      activeOpacity={0.7}
-    >
-      <Surface style={styles.resultCard} elevation={1}>
-        <View style={styles.cardContent}>
-          <View style={styles.cardLeft}>
-            <View style={styles.workoutNameRow}>
-              <Text variant="titleMedium" style={styles.workoutName} numberOfLines={1}>
-                {item.workout?.title || "Workout"}
-              </Text>
-              {item.is_pr && <Text style={styles.prIcon}>🏆</Text>}
-            </View>
-            <Text variant="bodySmall" style={styles.date}>
-              {new Date(item.created_at).toLocaleDateString("en-US", {
-                weekday: "short",
-                month: "short",
-                day: "numeric",
-              })}
-            </Text>
-            {item.notes && (
-              <Text variant="bodySmall" style={styles.notes} numberOfLines={1}>
-                {item.notes}
-              </Text>
-            )}
-          </View>
-          <View style={styles.cardRight}>
-            <Text variant="titleLarge" style={styles.resultValue}>
-              {item.displayValue}
-            </Text>
-            <Chip compact mode="outlined" style={styles.scaleChip}>
-              {item.scale.toUpperCase()}
-            </Chip>
-          </View>
-          <ChevronRight size={20} color="#ccc" />
-        </View>
-      </Surface>
-    </TouchableOpacity>
-  );
-
-  const renderMonthSection = ({ item }: { item: MonthGroup }) => (
-    <View style={styles.monthSection}>
-      <Text variant="titleMedium" style={styles.monthLabel}>
-        {item.label}
-      </Text>
-      {item.results.map((result) => (
-        <View key={result.id}>{renderResultCard({ item: result })}</View>
-      ))}
-    </View>
-  );
 
   if (loading) {
     return (
-      <SafeAreaView style={styles.container} edges={["top"]}>
-        <View style={styles.loadingContainer}>
-          <ActivityIndicator size="large" color={brandColors.smartBlue.DEFAULT} />
+      <Screen>
+        <View style={styles.loading}>
+          <ActivityIndicator size="large" color={palette.blue} />
         </View>
-      </SafeAreaView>
+      </Screen>
     );
   }
 
   return (
-    <SafeAreaView style={styles.container} edges={["top"]}>
-      {/* Header */}
+    <Screen>
       <View style={styles.header}>
-        <Text variant="headlineMedium" style={styles.title}>
-          Workout History
-        </Text>
-        <Text variant="bodyMedium" style={styles.subtitle}>
-          {results.length} total workouts logged
-        </Text>
+        <AppText variant="eyebrow">The book</AppText>
+        <AppText variant="display" style={styles.title}>
+          History
+        </AppText>
+        <AppText variant="italic">
+          {results.length
+            ? `${results.length} session${results.length === 1 ? "" : "s"} logged.`
+            : "Nothing in ink yet."}
+        </AppText>
       </View>
 
-      {/* Filters */}
-      <View style={styles.filterContainer}>
+      <View style={styles.filters}>
         <FlatList
           data={FILTERS}
           horizontal
@@ -228,168 +144,140 @@ export default function HistoryScreen() {
           contentContainerStyle={styles.filterList}
           keyExtractor={(item) => item.value}
           renderItem={({ item: f }) => (
-            <Chip
+            <Pill
+              label={f.label}
               selected={filter === f.value}
               onPress={() => setFilter(f.value)}
-              mode={filter === f.value ? "flat" : "outlined"}
-              style={[
-                styles.filterChip,
-                filter === f.value && styles.activeFilterChip,
-              ]}
-              textStyle={filter === f.value ? styles.activeFilterText : undefined}
-            >
-              {f.value === "prs" ? "🏆 " : ""}
-              {f.label}
-            </Chip>
+              tone={f.value === "prs" ? "peach" : "blue"}
+            />
           )}
         />
       </View>
 
-      {/* Results */}
       {filteredResults.length === 0 ? (
-        <View style={styles.emptyState}>
-          <Clock
-            size={48}
-            color={brandColors.practicalGray.light}
-            style={styles.emptyIcon}
-          />
-          <Text variant="titleMedium" style={styles.emptyTitle}>
-            {filter === "all" ? "No History Yet" : "No Results Found"}
-          </Text>
-          <Text variant="bodyMedium" style={styles.emptyText}>
+        <View style={styles.empty}>
+          <AppText variant="headline">
+            {filter === "all" ? "A quiet log." : "Nothing in this drawer."}
+          </AppText>
+          <AppText variant="body" style={styles.emptyText}>
             {filter === "all"
-              ? "Your completed workouts will appear here."
-              : `No ${filter === "prs" ? "PRs" : filter} results found.`}
-          </Text>
+              ? "Train a day, log it, and it lives here."
+              : `No ${filter === "prs" ? "PRs" : filter} yet.`}
+          </AppText>
         </View>
       ) : (
         <FlatList
           data={groupedResults}
-          renderItem={renderMonthSection}
           keyExtractor={(item) => item.monthKey}
-          contentContainerStyle={styles.listContent}
-          refreshControl={
-            <RefreshControl refreshing={refreshing} onRefresh={handleRefresh} />
-          }
+          contentContainerStyle={styles.list}
           showsVerticalScrollIndicator={false}
+          refreshControl={
+            <RefreshControl
+              refreshing={refreshing}
+              onRefresh={() => {
+                setRefreshing(true);
+                fetchHistory();
+              }}
+              tintColor={palette.blue}
+            />
+          }
+          renderItem={({ item }) => (
+            <View style={styles.month}>
+              <AppText variant="headline" style={styles.monthLabel}>
+                {item.label}
+              </AppText>
+              {item.results.map((result) => (
+                <HCard
+                  key={result.id}
+                  accent={result.is_pr ? "peach" : "blue"}
+                  onPress={() =>
+                    router.push(`/(athlete)/workout/${result.workout_id}`)
+                  }
+                >
+                  <View style={styles.row}>
+                    <View style={styles.rowLeft}>
+                      <AppText variant="title" numberOfLines={1}>
+                        {result.workout?.title || "Workout"}
+                      </AppText>
+                      <AppText variant="bodySmall">
+                        {new Date(result.created_at).toLocaleDateString(
+                          "en-US",
+                          {
+                            weekday: "short",
+                            month: "short",
+                            day: "numeric",
+                          },
+                        )}
+                        {result.is_pr ? "  ·  PR" : ""}
+                      </AppText>
+                      {result.notes ? (
+                        <AppText
+                          variant="italic"
+                          numberOfLines={1}
+                          style={styles.notes}
+                        >
+                          {result.notes}
+                        </AppText>
+                      ) : null}
+                    </View>
+                    <View style={styles.rowRight}>
+                      <AppText variant="title">{result.displayValue}</AppText>
+                      <AppText variant="eyebrow">{result.scale}</AppText>
+                    </View>
+                    <ChevronRight size={16} color={palette.inkFaint} />
+                  </View>
+                </HCard>
+              ))}
+            </View>
+          )}
         />
       )}
-    </SafeAreaView>
+    </Screen>
   );
 }
 
+function formatResult(result: {
+  result_type: string;
+  time_seconds: number | null;
+  rounds: number | null;
+  reps: number | null;
+  weight_kg: number | null;
+  count: number | null;
+}) {
+  switch (result.result_type) {
+    case "time": {
+      if (!result.time_seconds) return "—";
+      const mins = Math.floor(result.time_seconds / 60);
+      const secs = result.time_seconds % 60;
+      return `${mins}:${secs.toString().padStart(2, "0")}`;
+    }
+    case "rounds_reps":
+      return `${result.rounds || 0} + ${result.reps || 0}`;
+    case "weight":
+      return `${result.weight_kg || 0} kg`;
+    default:
+      return `${result.count || 0}`;
+  }
+}
+
 const styles = StyleSheet.create({
-  container: {
+  loading: { flex: 1, justifyContent: "center", alignItems: "center" },
+  header: { paddingHorizontal: 22, paddingTop: 8, paddingBottom: 8 },
+  title: { marginTop: 6, marginBottom: 6 },
+  filters: { marginBottom: 4 },
+  filterList: { paddingHorizontal: 22, gap: 8, paddingBottom: 8 },
+  list: { paddingHorizontal: 22, paddingBottom: TAB_BAR_CLEARANCE, gap: 8 },
+  month: { marginBottom: 10, gap: 10 },
+  monthLabel: { marginBottom: 2 },
+  row: { flexDirection: "row", alignItems: "center", gap: 8 },
+  rowLeft: { flex: 1 },
+  rowRight: { alignItems: "flex-end" },
+  notes: { marginTop: 4, fontSize: 14 },
+  empty: {
     flex: 1,
-    backgroundColor: "#f8f9fa",
-  },
-  loadingContainer: {
-    flex: 1,
+    padding: 36,
+    alignItems: "center",
     justifyContent: "center",
-    alignItems: "center",
   },
-  header: {
-    padding: 16,
-    paddingBottom: 8,
-  },
-  title: {
-    fontWeight: "bold",
-  },
-  subtitle: {
-    opacity: 0.6,
-    marginTop: 4,
-  },
-  filterContainer: {
-    borderBottomWidth: 1,
-    borderBottomColor: "#e0e0e0",
-    marginBottom: 8,
-  },
-  filterList: {
-    paddingHorizontal: 16,
-    paddingBottom: 12,
-    gap: 8,
-  },
-  filterChip: {
-    marginRight: 4,
-  },
-  activeFilterChip: {
-    backgroundColor: brandColors.smartBlue.DEFAULT,
-  },
-  activeFilterText: {
-    color: "#fff",
-  },
-  listContent: {
-    paddingHorizontal: 16,
-    paddingBottom: 24,
-  },
-  monthSection: {
-    marginBottom: 16,
-  },
-  monthLabel: {
-    fontWeight: "600",
-    opacity: 0.7,
-    marginBottom: 12,
-  },
-  resultCard: {
-    backgroundColor: "#fff",
-    borderRadius: 12,
-    marginBottom: 8,
-  },
-  cardContent: {
-    flexDirection: "row",
-    alignItems: "center",
-    padding: 12,
-  },
-  cardLeft: {
-    flex: 1,
-  },
-  workoutNameRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 6,
-  },
-  workoutName: {
-    fontWeight: "600",
-    flex: 1,
-  },
-  prIcon: {
-    fontSize: 14,
-  },
-  date: {
-    opacity: 0.6,
-    marginTop: 2,
-  },
-  notes: {
-    opacity: 0.5,
-    fontStyle: "italic",
-    marginTop: 4,
-  },
-  cardRight: {
-    alignItems: "flex-end",
-    marginRight: 8,
-  },
-  resultValue: {
-    fontWeight: "bold",
-  },
-  scaleChip: {
-    height: 24,
-    marginTop: 4,
-  },
-  emptyState: {
-    flex: 1,
-    justifyContent: "center",
-    alignItems: "center",
-    padding: 48,
-  },
-  emptyIcon: {
-    marginBottom: 16,
-  },
-  emptyTitle: {
-    fontWeight: "600",
-    marginBottom: 8,
-  },
-  emptyText: {
-    textAlign: "center",
-    opacity: 0.6,
-  },
+  emptyText: { textAlign: "center", marginTop: 8 },
 });

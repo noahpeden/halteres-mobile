@@ -1,128 +1,43 @@
+import { useFonts } from "expo-font";
 import { Stack } from "expo-router";
+import * as SplashScreen from "expo-splash-screen";
 import { StatusBar } from "expo-status-bar";
+import { useEffect } from "react";
+import { View } from "react-native";
 import { GestureHandlerRootView } from "react-native-gesture-handler";
-import { MD3LightTheme, PaperProvider } from "react-native-paper";
+import { PaperProvider } from "react-native-paper";
 import { AuthProvider } from "@/components/providers/AuthProvider";
 import { QueryProvider } from "@/components/providers/QueryProvider";
+import { fontAssets, palette, paperTheme } from "@/lib/theme";
 
-// Brand colors from web app (halteres.ai)
-export const brandColors = {
-  // Primary palette - Smart Blue
-  smartBlue: {
-    DEFAULT: "#1771dc",
-    dark: "#134e93",
-    medium: "#1a61b5",
-    light: "#3682de",
-    lightest: "#a5ceff",
-    container: "#deebfd",
-  },
-  // Secondary palette - Helpful Orange
-  helpfulOrange: {
-    DEFAULT: "#ea7f49",
-    dark: "#a75932",
-    medium: "#c06e44",
-    light: "#ed9264",
-    lightest: "#ffd2bb",
-    container: "#fff4ed",
-  },
-  // Accent palette - Thriving Green
-  thrivingGreen: {
-    DEFAULT: "#3c8f73",
-    dark: "#2d6955",
-    medium: "#3d846c",
-    light: "#65a790",
-    lightest: "#bfe8d9",
-    container: "#e8f5f0",
-  },
-  // Warning palette - Never Preachy Peach
-  peach: {
-    DEFAULT: "#ffcc7b",
-    dark: "#bf9147",
-    medium: "#ddad61",
-    light: "#ffd592",
-    lightest: "#ffeed3",
-    container: "#fff8eb",
-  },
-  // Neutral palette - Practical Gray
-  practicalGray: {
-    DEFAULT: "#6f879a",
-    dark: "#35546c",
-    medium: "#526f86",
-    light: "#7995a9",
-    lighter: "#e2e8eb",
-    lightest: "#c4d1db",
-    container: "#f5f7f9",
-  },
-  // Semantic colors
-  error: "#e74444",
-  errorContainer: "#fee2e2",
-  success: "#188038",
-  successContainer: "#d1fae5",
-  // Backgrounds
-  background: "#f9fbff",
-  surface: "#ffffff",
-  surfaceVariant: "#f5f4f0",
-};
+export { brandColors } from "@/lib/theme";
 
-// Custom theme matching Halteres brand
-const theme = {
-  ...MD3LightTheme,
-  roundness: 12,
-  colors: {
-    ...MD3LightTheme.colors,
-    // Primary - Smart Blue
-    primary: brandColors.smartBlue.DEFAULT,
-    primaryContainer: brandColors.smartBlue.container,
-    onPrimary: "#ffffff",
-    onPrimaryContainer: brandColors.smartBlue.dark,
-    // Secondary - Helpful Orange
-    secondary: brandColors.helpfulOrange.DEFAULT,
-    secondaryContainer: brandColors.helpfulOrange.container,
-    onSecondary: "#ffffff",
-    onSecondaryContainer: brandColors.helpfulOrange.dark,
-    // Tertiary - Thriving Green
-    tertiary: brandColors.thrivingGreen.DEFAULT,
-    tertiaryContainer: brandColors.thrivingGreen.container,
-    onTertiary: "#ffffff",
-    onTertiaryContainer: brandColors.thrivingGreen.dark,
-    // Surfaces
-    surface: brandColors.surface,
-    surfaceVariant: brandColors.surfaceVariant,
-    background: brandColors.background,
-    onSurface: "#121212",
-    onSurfaceVariant: brandColors.practicalGray.DEFAULT,
-    onBackground: "#121212",
-    // Error
-    error: brandColors.error,
-    errorContainer: brandColors.errorContainer,
-    onError: "#ffffff",
-    onErrorContainer: "#7f1d1d",
-    // Outlines
-    outline: brandColors.practicalGray.lightest,
-    outlineVariant: "#eaebed",
-    // Inverse
-    inverseSurface: "#121212",
-    inverseOnSurface: "#f9fbff",
-    inversePrimary: brandColors.smartBlue.light,
-    // Other
-    shadow: "#000000",
-    scrim: "#000000",
-    backdrop: "rgba(18, 18, 18, 0.4)",
-    // Custom additions for easy access
-    warning: brandColors.peach.DEFAULT,
-    warningContainer: brandColors.peach.container,
-    success: brandColors.success,
-    successContainer: brandColors.successContainer,
-  },
-};
+SplashScreen.preventAutoHideAsync().catch(() => undefined);
 
 export default function RootLayout() {
+  const [fontsLoaded] = useFonts(fontAssets);
+
+  useEffect(() => {
+    if (fontsLoaded) {
+      SplashScreen.hideAsync().catch(() => undefined);
+    }
+  }, [fontsLoaded]);
+
+  if (!fontsLoaded) {
+    return <View style={{ flex: 1, backgroundColor: palette.paper }} />;
+  }
+
   return (
-    <GestureHandlerRootView style={{ flex: 1 }}>
-      <PaperProvider theme={theme}>
+    <GestureHandlerRootView style={{ flex: 1, backgroundColor: palette.paper }}>
+      <PaperProvider theme={paperTheme}>
         <QueryProvider>
           <AuthProvider>
-            <Stack screenOptions={{ headerShown: false }}>
+            <Stack
+              screenOptions={{
+                headerShown: false,
+                contentStyle: { backgroundColor: palette.paper },
+              }}
+            >
               <Stack.Screen name="index" />
               <Stack.Screen name="(auth)" />
               <Stack.Screen name="(athlete)" />

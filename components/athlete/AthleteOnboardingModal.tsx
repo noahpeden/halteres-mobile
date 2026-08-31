@@ -1,9 +1,15 @@
+import { Check } from "lucide-react-native";
 import { useState } from "react";
-import { View, StyleSheet, ScrollView, Modal } from "react-native";
-import { Text, Button, TextInput, Surface, ProgressBar } from "react-native-paper";
-import { Check, Dumbbell, Trophy, Sparkles, ChartBar } from "lucide-react-native";
-import { brandColors } from "@/app/_layout";
+import { Modal, ScrollView, StyleSheet, View } from "react-native";
+import {
+  Button,
+  ProgressBar,
+  Surface,
+  Text,
+  TextInput,
+} from "react-native-paper";
 import { useAthleteProfile } from "@/hooks/useAthleteProfile";
+import { palette } from "@/lib/theme";
 
 type Profile = {
   display_name?: string;
@@ -32,7 +38,7 @@ const ONBOARDING_STEPS = [
 
 export default function AthleteOnboardingModal({
   profile,
-  gymName,
+  gymName: _gymName,
   visible,
   onComplete,
 }: Props) {
@@ -76,34 +82,35 @@ export default function AthleteOnboardingModal({
       case "welcome":
         return (
           <View style={styles.stepContent}>
-            <Text style={styles.welcomeEmoji}>🏋️</Text>
+            <Text style={styles.welcomeEmoji}>✎</Text>
             <Text variant="headlineMedium" style={styles.welcomeTitle}>
-              Welcome to HalteresAI!
+              Welcome to Halteres
             </Text>
             <Text variant="bodyMedium" style={styles.welcomeText}>
-              Let's get you set up so you can start tracking your workouts and crushing goals.
+              A training companion for people who already train. Write a
+              program, edit any day, log it.
             </Text>
 
             <Surface style={styles.featuresCard} elevation={1}>
               <Text variant="titleSmall" style={styles.featuresTitle}>
-                Here's what you can do:
+                The loop
               </Text>
               <View style={styles.featureRow}>
-                <Check size={18} color={brandColors.thrivingGreen.DEFAULT} />
+                <Check size={18} color={palette.green} />
                 <Text variant="bodyMedium" style={styles.featureText}>
-                  View today's personalized workouts
+                  Today — what's on the floor
                 </Text>
               </View>
               <View style={styles.featureRow}>
-                <Check size={18} color={brandColors.thrivingGreen.DEFAULT} />
+                <Check size={18} color={palette.green} />
                 <Text variant="bodyMedium" style={styles.featureText}>
-                  Log your results and track PRs
+                  Write a program, then generate the days
                 </Text>
               </View>
               <View style={styles.featureRow}>
-                <Check size={18} color={brandColors.thrivingGreen.DEFAULT} />
+                <Check size={18} color={palette.green} />
                 <Text variant="bodyMedium" style={styles.featureText}>
-                  Get AI-powered feedback on performance
+                  Log the session while it's still in your hands
                 </Text>
               </View>
             </Surface>
@@ -123,7 +130,9 @@ export default function AthleteOnboardingModal({
             <TextInput
               label="Display Name"
               value={formData.display_name}
-              onChangeText={(text) => setFormData({ ...formData, display_name: text })}
+              onChangeText={(text) =>
+                setFormData({ ...formData, display_name: text })
+              }
               mode="outlined"
               style={styles.input}
             />
@@ -135,7 +144,10 @@ export default function AthleteOnboardingModal({
 
       case "metrics":
         return (
-          <ScrollView style={styles.stepContent} showsVerticalScrollIndicator={false}>
+          <ScrollView
+            style={styles.stepContent}
+            showsVerticalScrollIndicator={false}
+          >
             <Text variant="titleLarge" style={styles.stepTitle}>
               Your Baseline Metrics
             </Text>
@@ -148,7 +160,9 @@ export default function AthleteOnboardingModal({
                 <TextInput
                   label="Squat 1RM (kg)"
                   value={formData.squat_1rm}
-                  onChangeText={(text) => setFormData({ ...formData, squat_1rm: text })}
+                  onChangeText={(text) =>
+                    setFormData({ ...formData, squat_1rm: text })
+                  }
                   mode="outlined"
                   keyboardType="numeric"
                   style={styles.metricInput}
@@ -158,7 +172,9 @@ export default function AthleteOnboardingModal({
                 <TextInput
                   label="Deadlift 1RM (kg)"
                   value={formData.deadlift_1rm}
-                  onChangeText={(text) => setFormData({ ...formData, deadlift_1rm: text })}
+                  onChangeText={(text) =>
+                    setFormData({ ...formData, deadlift_1rm: text })
+                  }
                   mode="outlined"
                   keyboardType="numeric"
                   style={styles.metricInput}
@@ -168,7 +184,9 @@ export default function AthleteOnboardingModal({
                 <TextInput
                   label="Bench 1RM (kg)"
                   value={formData.bench_1rm}
-                  onChangeText={(text) => setFormData({ ...formData, bench_1rm: text })}
+                  onChangeText={(text) =>
+                    setFormData({ ...formData, bench_1rm: text })
+                  }
                   mode="outlined"
                   keyboardType="numeric"
                   style={styles.metricInput}
@@ -178,7 +196,9 @@ export default function AthleteOnboardingModal({
                 <TextInput
                   label="Mile Time"
                   value={formData.mile_time}
-                  onChangeText={(text) => setFormData({ ...formData, mile_time: text })}
+                  onChangeText={(text) =>
+                    setFormData({ ...formData, mile_time: text })
+                  }
                   mode="outlined"
                   placeholder="e.g. 7:30"
                   style={styles.metricInput}
@@ -194,7 +214,9 @@ export default function AthleteOnboardingModal({
                 <TextInput
                   label="Weight (kg)"
                   value={formData.weight_kg}
-                  onChangeText={(text) => setFormData({ ...formData, weight_kg: text })}
+                  onChangeText={(text) =>
+                    setFormData({ ...formData, weight_kg: text })
+                  }
                   mode="outlined"
                   keyboardType="numeric"
                   style={styles.metricInput}
@@ -204,7 +226,9 @@ export default function AthleteOnboardingModal({
                 <TextInput
                   label="Height (cm)"
                   value={formData.height_cm}
-                  onChangeText={(text) => setFormData({ ...formData, height_cm: text })}
+                  onChangeText={(text) =>
+                    setFormData({ ...formData, height_cm: text })
+                  }
                   mode="outlined"
                   keyboardType="numeric"
                   style={styles.metricInput}
@@ -221,29 +245,30 @@ export default function AthleteOnboardingModal({
       case "complete":
         return (
           <View style={styles.stepContent}>
-            <Text style={styles.welcomeEmoji}>🎉</Text>
+            <Text style={styles.welcomeEmoji}>✓</Text>
             <Text variant="headlineMedium" style={styles.welcomeTitle}>
-              You're All Set!
+              The page is open.
             </Text>
             <Text variant="bodyMedium" style={styles.welcomeText}>
-              Time to start crushing workouts and setting PRs.
+              Write a block, train the day, log the ink. That's the whole
+              product.
             </Text>
 
             <Surface style={styles.tipsCard} elevation={1}>
               <Text variant="titleSmall" style={styles.tipsTitle}>
-                Quick Tips:
+                Keep it easy
               </Text>
               <Text variant="bodySmall" style={styles.tipText}>
-                • Check your dashboard daily for today's workouts
+                • Today is the home key — one thumb to log
               </Text>
               <Text variant="bodySmall" style={styles.tipText}>
-                • Log your results immediately after each workout
+                • Programs is the writer, not a coach inbox
               </Text>
               <Text variant="bodySmall" style={styles.tipText}>
-                • Request AI feedback for personalized guidance
+                • Weeks are yours — don't lock yourself to eight
               </Text>
               <Text variant="bodySmall" style={styles.tipText}>
-                • Track your PRs and progress over time
+                • Stuck? noah@halteres.ai
               </Text>
             </Surface>
           </View>
@@ -255,13 +280,17 @@ export default function AthleteOnboardingModal({
   };
 
   return (
-    <Modal visible={visible} animationType="slide" presentationStyle="pageSheet">
+    <Modal
+      visible={visible}
+      animationType="slide"
+      presentationStyle="pageSheet"
+    >
       <View style={styles.container}>
         {/* Progress */}
         <View style={styles.progressContainer}>
           <ProgressBar
             progress={(currentStep + 1) / ONBOARDING_STEPS.length}
-            color={brandColors.smartBlue.DEFAULT}
+            color={palette.blue}
             style={styles.progressBar}
           />
           <View style={styles.stepsRow}>
@@ -290,7 +319,9 @@ export default function AthleteOnboardingModal({
           <View style={{ flex: 1 }} />
           {currentStep < ONBOARDING_STEPS.length - 1 ? (
             <Button mode="contained" onPress={handleNext}>
-              {currentStep === ONBOARDING_STEPS.length - 2 ? "Almost Done" : "Next"}
+              {currentStep === ONBOARDING_STEPS.length - 2
+                ? "Almost Done"
+                : "Next"}
             </Button>
           ) : (
             <Button mode="contained" onPress={handleComplete} loading={saving}>
@@ -306,7 +337,7 @@ export default function AthleteOnboardingModal({
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: "#fff",
+    backgroundColor: palette.paper,
     paddingHorizontal: 20,
     paddingTop: 20,
     paddingBottom: 40,
@@ -331,7 +362,7 @@ const styles = StyleSheet.create({
     backgroundColor: "#e0e0e0",
   },
   stepDotActive: {
-    backgroundColor: brandColors.smartBlue.DEFAULT,
+    backgroundColor: palette.blue,
   },
   content: {
     flex: 1,
@@ -359,7 +390,7 @@ const styles = StyleSheet.create({
   featuresCard: {
     padding: 20,
     borderRadius: 12,
-    backgroundColor: "#f8f9fa",
+    backgroundColor: palette.paperSunken,
   },
   featuresTitle: {
     fontWeight: "600",
@@ -415,11 +446,11 @@ const styles = StyleSheet.create({
   tipsCard: {
     padding: 20,
     borderRadius: 12,
-    backgroundColor: brandColors.smartBlue.container,
+    backgroundColor: palette.blueWash,
   },
   tipsTitle: {
     fontWeight: "600",
-    color: brandColors.smartBlue.DEFAULT,
+    color: palette.blue,
     marginBottom: 12,
   },
   tipText: {

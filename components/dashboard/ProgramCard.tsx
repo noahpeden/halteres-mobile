@@ -6,8 +6,8 @@ import Animated, {
   useSharedValue,
   withSpring,
 } from "react-native-reanimated";
-import { Text } from "react-native-paper";
-import { brandColors } from "@/app/_layout";
+import { AppText } from "@/components/ui/AppText";
+import { fonts, palette, radii, shadows } from "@/lib/theme";
 
 type ProgramCardProps = {
   program: {
@@ -24,73 +24,63 @@ const AnimatedPressable = Animated.createAnimatedComponent(Pressable);
 export function ProgramCard({ program }: ProgramCardProps) {
   const router = useRouter();
   const scale = useSharedValue(1);
-
   const animatedStyle = useAnimatedStyle(() => ({
     transform: [{ scale: scale.value }],
   }));
 
-  const handlePress = () => {
-    router.push(`/(athlete)/programs/${program.id}`);
-  };
-
   return (
     <AnimatedPressable
-      onPress={handlePress}
+      onPress={() => router.push(`/(athlete)/programs/${program.id}`)}
       onPressIn={() => {
         scale.value = withSpring(0.98, { damping: 15, stiffness: 300 });
       }}
       onPressOut={() => {
         scale.value = withSpring(1, { damping: 15, stiffness: 150 });
       }}
-      style={[styles.container, animatedStyle]}
+      style={[styles.wrap, animatedStyle]}
     >
-      <View style={styles.card}>
-        <View style={styles.accentBar} />
-        <View style={styles.content}>
-          <View style={styles.header}>
-            <View style={styles.titleContainer}>
-              <Text variant="titleMedium" style={styles.title}>
-                {program.name}
-              </Text>
-              {program.description && (
-                <Text
-                  variant="bodySmall"
-                  style={styles.description}
-                  numberOfLines={1}
-                >
-                  {program.description}
-                </Text>
-              )}
-            </View>
-            <ChevronRight size={20} color={brandColors.practicalGray.light} />
+      <View style={styles.spine} />
+      <View style={styles.body}>
+        <View style={styles.top}>
+          <View style={styles.titles}>
+            <AppText variant="title">{program.name}</AppText>
+            {program.description ? (
+              <AppText
+                variant="bodySmall"
+                numberOfLines={1}
+                style={styles.desc}
+              >
+                {program.description}
+              </AppText>
+            ) : null}
           </View>
-
-          <View style={styles.metaContainer}>
-            <View style={[styles.metaItem, styles.metaItemPrimary]}>
-              <Calendar
-                size={14}
-                color={brandColors.smartBlue.DEFAULT}
-                strokeWidth={2}
-              />
-              <Text variant="labelSmall" style={styles.metaTextPrimary}>
-                {program.duration_weeks} weeks
-              </Text>
-            </View>
-
-            {program.workout_count !== undefined &&
-              program.workout_count > 0 && (
-                <View style={[styles.metaItem, styles.metaItemTertiary]}>
-                  <Dumbbell
-                    size={14}
-                    color={brandColors.helpfulOrange.DEFAULT}
-                    strokeWidth={2}
-                  />
-                  <Text variant="labelSmall" style={styles.metaTextTertiary}>
-                    {program.workout_count} workouts
-                  </Text>
-                </View>
-              )}
+          <ChevronRight size={18} color={palette.inkFaint} />
+        </View>
+        <View style={styles.meta}>
+          <View style={[styles.chip, { backgroundColor: palette.blueWash }]}>
+            <Calendar size={13} color={palette.blue} strokeWidth={2} />
+            <AppText
+              variant="label"
+              color={palette.blueDeep}
+              style={styles.chipText}
+            >
+              {program.duration_weeks} weeks
+            </AppText>
           </View>
+          {program.workout_count !== undefined && program.workout_count > 0 ? (
+            <View
+              style={[styles.chip, { backgroundColor: palette.orangeWash }]}
+            >
+              <Dumbbell size={13} color={palette.orange} strokeWidth={2} />
+              <AppText
+                variant="label"
+                color={palette.orangeDeep}
+                style={styles.chipText}
+              >
+                {program.workout_count} days
+              </AppText>
+            </View>
+          ) : null}
         </View>
       </View>
     </AnimatedPressable>
@@ -98,76 +88,42 @@ export function ProgramCard({ program }: ProgramCardProps) {
 }
 
 const styles = StyleSheet.create({
-  container: {
+  wrap: {
     marginBottom: 12,
-  },
-  card: {
-    backgroundColor: "#ffffff",
-    borderRadius: 16,
+    backgroundColor: palette.paperElevated,
+    borderRadius: radii.lg,
     flexDirection: "row",
     overflow: "hidden",
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.06,
-    shadowRadius: 8,
-    elevation: 3,
+    borderWidth: 1,
+    borderColor: "rgba(26, 35, 50, 0.05)",
+    ...shadows.card,
   },
-  accentBar: {
-    width: 4,
-    backgroundColor: brandColors.smartBlue.DEFAULT,
+  spine: {
+    width: 5,
+    backgroundColor: palette.orange,
   },
-  content: {
+  body: {
     flex: 1,
     padding: 16,
   },
-  header: {
+  top: {
     flexDirection: "row",
     alignItems: "center",
     marginBottom: 12,
   },
-  titleContainer: {
-    flex: 1,
-  },
-  title: {
-    fontWeight: "700",
-    color: "#121212",
-  },
-  description: {
-    color: brandColors.practicalGray.DEFAULT,
-    marginTop: 2,
-  },
-  metaContainer: {
-    flexDirection: "row",
-    flexWrap: "wrap",
-    gap: 8,
-  },
-  metaItem: {
+  titles: { flex: 1 },
+  desc: { marginTop: 2 },
+  meta: { flexDirection: "row", flexWrap: "wrap", gap: 8 },
+  chip: {
     flexDirection: "row",
     alignItems: "center",
-    gap: 4,
+    gap: 5,
     paddingHorizontal: 10,
     paddingVertical: 6,
-    borderRadius: 8,
+    borderRadius: 999,
   },
-  metaItemPrimary: {
-    backgroundColor: brandColors.smartBlue.container,
-  },
-  metaItemSecondary: {
-    backgroundColor: brandColors.thrivingGreen.container,
-  },
-  metaItemTertiary: {
-    backgroundColor: brandColors.helpfulOrange.container,
-  },
-  metaTextPrimary: {
-    color: brandColors.smartBlue.dark,
-    fontWeight: "600",
-  },
-  metaTextSecondary: {
-    color: brandColors.thrivingGreen.dark,
-    fontWeight: "600",
-  },
-  metaTextTertiary: {
-    color: brandColors.helpfulOrange.dark,
-    fontWeight: "600",
+  chipText: {
+    fontFamily: fonts.uiSemi,
+    fontSize: 12,
   },
 });

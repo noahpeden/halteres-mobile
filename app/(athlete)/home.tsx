@@ -1,14 +1,18 @@
-import { useState, useEffect, useContext, useCallback } from "react";
-import { View, StyleSheet, ScrollView, RefreshControl, TouchableOpacity } from "react-native";
-import { Text, Surface, Button, Card, ActivityIndicator } from "react-native-paper";
-import { SafeAreaView } from "react-native-safe-area-context";
 import { useRouter } from "expo-router";
-import { Calendar, Dumbbell, Clock, TrendingUp } from "lucide-react-native";
-import { AuthContext } from "@/components/providers/AuthProvider";
-import { supabase } from "@/lib/supabase/client";
-import { brandColors } from "@/app/_layout";
-import WeeklyTrendsCard from "@/components/athlete/WeeklyTrendsCard";
+import { Check, PenLine } from "lucide-react-native";
+import { useCallback, useContext, useEffect, useState } from "react";
+import { RefreshControl, ScrollView, StyleSheet, View } from "react-native";
+import { ActivityIndicator } from "react-native-paper";
 import AthleteOnboardingModal from "@/components/athlete/AthleteOnboardingModal";
+import WeeklyTrendsCard from "@/components/athlete/WeeklyTrendsCard";
+import { TAB_BAR_CLEARANCE } from "@/components/navigation/AthleteTabBar";
+import { AuthContext } from "@/components/providers/AuthProvider";
+import { AppText } from "@/components/ui/AppText";
+import { HButton } from "@/components/ui/HButton";
+import { HCard } from "@/components/ui/HCard";
+import { Screen } from "@/components/ui/Screen";
+import { supabase } from "@/lib/supabase/client";
+import { palette } from "@/lib/theme";
 
 type Workout = {
   id: string;
@@ -30,9 +34,15 @@ type RecentResult = {
   scale: string;
   is_pr: boolean;
   created_at: string;
-  workout: { name: string } | null;
+  workout: { title?: string; name?: string } | null;
   displayValue: string;
 };
+
+function greetingForHour(hour: number) {
+  if (hour < 12) return "Morning";
+  if (hour < 17) return "Afternoon";
+  return "Evening";
+}
 
 export default function AthleteHomeScreen() {
   const router = useRouter();
@@ -48,8 +58,9 @@ export default function AthleteHomeScreen() {
     currentStreak: 0,
   });
 
-  const displayName = profile?.display_name || profile?.full_name || "Athlete";
-  // Check if onboarding is needed
+  const displayName = profile?.display_name || profile?.full_name || "friend";
+  const firstName = displayName.split(" ")[0];
+
   useEffect(() => {
     if (profile && !profile.onboarding_completed) {
       setShowOnboarding(true);
@@ -74,7 +85,6 @@ export default function AthleteHomeScreen() {
       const startOfDay = `${today}T00:00:00.000Z`;
       const endOfDay = `${today}T23:59:59.999Z`;
 
-      // Determine the user's active program (today within calendar range)
       const { data: entities } = await supabase
         .from("entities")
         .select("id")
@@ -93,7 +103,10 @@ export default function AthleteHomeScreen() {
 
         if (programs && programs.length > 0) {
           const todayDate = new Date(today);
-          for (const p of programs as any[]) {
+          for (const p of programs as {
+            id: string;
+            calendar_data?: { start_date?: string; end_date?: string };
+          }[]) {
             const cal = p.calendar_data || {};
             const start = cal.start_date ? new Date(cal.start_date) : null;
             const end = cal.end_date ? new Date(cal.end_date) : null;
@@ -101,19 +114,23 @@ export default function AthleteHomeScreen() {
               const startD = new Date(start.toISOString().split("T")[0]);
               const endD = new Date(end.toISOString().split("T")[0]);
               if (todayDate >= startD && todayDate <= endD) {
-                activeProgramId = p.id as string;
+                activeProgramId = p.id;
                 break;
               }
             }
           }
-          // Fallback to most recent program if none active
           if (!activeProgramId) {
-            activeProgramId = (programs[0] as any).id as string;
+            activeProgramId = (programs[0] as { id: string }).id;
           }
         }
       }
 
-      let workouts: any[] = [];
+      let workouts: {
+        id: string;
+        title: string;
+        workout_type: string;
+        body: string | null;
+      }[] = [];
       if (activeProgramId) {
         const { data: todays } = await supabase
           .from("program_workouts")
@@ -125,13 +142,17 @@ export default function AthleteHomeScreen() {
         workouts = todays || [];
       }
 
-      // Check which workouts user has logged
       const workoutIds = workouts.map((w) => w.id);
       const { data: userResults } = await supabase
         .from("workout_results")
         .select("workout_id")
         .eq("user_id", user.id)
-        .in("workout_id", workoutIds)
+        .in(
+          "workout_id",
+          workoutIds.length
+            ? workoutIds
+            : ["00000000-0000-0000-0000-000000000000"],
+        )
         .is("deleted_at", null);
 
       const loggedIds = new Set((userResults || []).map((r) => r.workout_id));
@@ -139,10 +160,9 @@ export default function AthleteHomeScreen() {
         workouts.map((w) => ({
           ...w,
           hasLogged: loggedIds.has(w.id),
-        }))
+        })),
       );
 
-      // Fetch recent results
       const { data: results } = await supabase
         .from("workout_results")
         .select(`
@@ -159,10 +179,9 @@ export default function AthleteHomeScreen() {
         (results || []).map((r) => ({
           ...r,
           displayValue: formatResult(r),
-        }))
+        })),
       );
 
-      // Fetch stats
       const weekAgo = new Date();
       weekAgo.setDate(weekAgo.getDate() - 7);
       const monthAgo = new Date();
@@ -203,19 +222,25 @@ export default function AthleteHomeScreen() {
     fetchData();
   };
 
+  const todayLabel = new Date().toLocaleDateString("en-US", {
+    weekday: "long",
+    month: "long",
+    day: "numeric",
+  });
+  const hello = greetingForHour(new Date().getHours());
+
   if (loading) {
     return (
-      <SafeAreaView style={styles.container} edges={["top"]}>
-        <View style={styles.loadingContainer}>
-          <ActivityIndicator size="large" />
+      <Screen>
+        <View style={styles.loading}>
+          <ActivityIndicator size="large" color={palette.blue} />
         </View>
-      </SafeAreaView>
+      </Screen>
     );
   }
 
   return (
-    <SafeAreaView style={styles.container} edges={["top"]}>
-      {/* Onboarding Modal */}
+    <Screen>
       <AthleteOnboardingModal
         profile={profile}
         visible={showOnboarding}
@@ -223,211 +248,203 @@ export default function AthleteHomeScreen() {
       />
 
       <ScrollView
-        contentContainerStyle={styles.scrollContent}
+        contentContainerStyle={styles.scroll}
         refreshControl={
-          <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
+          <RefreshControl
+            refreshing={refreshing}
+            onRefresh={onRefresh}
+            tintColor={palette.blue}
+          />
         }
+        showsVerticalScrollIndicator={false}
       >
-        {/* Header */}
         <View style={styles.header}>
-          <View>
-            <Text variant="titleMedium" style={styles.greeting}>
-              Welcome back,
-            </Text>
-            <Text variant="headlineMedium" style={styles.name}>
-              {displayName}
-            </Text>
-          </View>
+          <AppText variant="eyebrow">{todayLabel}</AppText>
+          <AppText variant="display" style={styles.hello}>
+            {hello}, {firstName}.
+          </AppText>
+          <AppText variant="italic">
+            What’s on the floor — write it, train it, log it.
+          </AppText>
         </View>
 
-        {/* Quick Stats */}
-        <View style={styles.statsRow}>
-          <Surface style={styles.statCard} elevation={1}>
-            <Text variant="headlineMedium" style={styles.statValue}>
-              {stats.workoutsThisWeek}
-            </Text>
-            <Text variant="labelSmall" style={styles.statLabel}>
-              This Week
-            </Text>
-          </Surface>
-          <Surface style={[styles.statCard, styles.statCardWarning]} elevation={1}>
-            <Text variant="headlineMedium" style={styles.statValueWarning}>
-              {stats.prsThisMonth}
-            </Text>
-            <Text variant="labelSmall" style={styles.statLabel}>
-              PRs This Month
-            </Text>
-          </Surface>
-          <Surface style={[styles.statCard, styles.statCardSuccess]} elevation={1}>
-            <Text variant="headlineMedium" style={styles.statValueSuccess}>
-              {stats.currentStreak}
-            </Text>
-            <Text variant="labelSmall" style={styles.statLabel}>
-              Day Streak
-            </Text>
-          </Surface>
+        <View style={styles.stamps}>
+          <Stamp
+            value={stats.workoutsThisWeek}
+            label="this week"
+            color={palette.blue}
+          />
+          <Stamp
+            value={stats.prsThisMonth}
+            label="PRs this month"
+            color={palette.orange}
+          />
         </View>
 
-        {/* Weekly AI Trends */}
         <WeeklyTrendsCard />
 
-        {/* Today's Workouts */}
-        <View style={styles.section}>
-          <View style={styles.sectionHeader}>
-            <Calendar size={20} color={brandColors.smartBlue.DEFAULT} />
-            <Text variant="titleMedium" style={styles.sectionTitle}>
-              Today's Workouts
-            </Text>
-          </View>
-
-          {todaysWorkouts.length === 0 ? (
-            <Card style={styles.workoutCard} mode="elevated">
-              <Card.Content>
-                <View style={styles.workoutPlaceholder}>
-                  <Dumbbell size={32} color={brandColors.practicalGray.light} />
-                  <Text variant="bodyMedium" style={styles.workoutPlaceholderText}>
-                    No workout scheduled for today
-                  </Text>
-                  <Text variant="bodySmall" style={styles.workoutSubtext}>
-                    {`Create your program to get started.`}
-                  </Text>
-                  <Button
-                    mode="contained"
-                    onPress={() => router.push("/(athlete)/programs/create")}
-                    style={{ marginTop: 12 }}
-                  >
-                    Create Program
-                  </Button>
-                </View>
-              </Card.Content>
-            </Card>
-          ) : (
-            todaysWorkouts.map((workout) => (
-              <TouchableOpacity
-                key={workout.id}
-                onPress={() => router.push(`/(athlete)/workout/${workout.id}`)}
-              >
-                <Card style={styles.workoutCard} mode="elevated">
-                  <Card.Content>
-                    <View style={styles.workoutRow}>
-                      <View style={styles.workoutInfo}>
-                        <Text variant="titleMedium" style={styles.workoutName}>
-                        {workout.title}
-                        </Text>
-                        <Text variant="bodySmall" style={styles.workoutType}>
-                          {workout.workout_type}
-                        </Text>
-                      </View>
-                      {workout.hasLogged ? (
-                        <Surface style={styles.completedBadge} elevation={0}>
-                          <Text style={styles.completedText}>Completed</Text>
-                        </Surface>
-                      ) : (
-                        <Button mode="contained" compact>
-                          Log Result
-                        </Button>
-                      )}
-                    </View>
-                  {workout.body && (
-                      <Text
-                        variant="bodySmall"
-                        style={styles.workoutDescription}
-                        numberOfLines={2}
-                      >
-                      {workout.body}
-                      </Text>
-                    )}
-                  </Card.Content>
-                </Card>
-              </TouchableOpacity>
-            ))
-          )}
-        </View>
-
-        {/* Recent Activity */}
-        <View style={styles.section}>
-          <View style={styles.sectionHeader}>
-            <Clock size={20} color={brandColors.smartBlue.DEFAULT} />
-            <Text variant="titleMedium" style={styles.sectionTitle}>
-              Recent Activity
-            </Text>
-            <TouchableOpacity onPress={() => router.push("/(athlete)/history")}>
-              <Text style={styles.viewAll}>View All</Text>
-            </TouchableOpacity>
-          </View>
-
-          {recentResults.length === 0 ? (
-            <Surface style={styles.emptyState} elevation={1}>
-              <Text variant="bodyMedium" style={styles.emptyStateText}>
-                No recent activity yet
-              </Text>
-              <Text variant="bodySmall" style={styles.emptyStateSubtext}>
-                Complete a workout to see your history here
-              </Text>
-            </Surface>
-          ) : (
-            <Surface style={styles.activityList} elevation={1}>
-              {recentResults.map((result, idx) => (
-                <TouchableOpacity
-                  key={result.id}
-                  onPress={() => router.push(`/(athlete)/workout/${result.workout_id}`)}
-                >
-                  <View
-                    style={[
-                      styles.activityItem,
-                      idx < recentResults.length - 1 && styles.activityItemBorder,
-                    ]}
-                  >
-                    <View style={styles.activityInfo}>
-                      <Text variant="bodyMedium" style={styles.activityName}>
-                        {result.workout?.title || "Workout"}
-                        {result.is_pr && " 🏆"}
-                      </Text>
-                      <Text variant="bodySmall" style={styles.activityDate}>
-                        {new Date(result.created_at).toLocaleDateString()}
-                      </Text>
-                    </View>
-                    <View style={styles.activityResult}>
-                      <Text variant="titleMedium" style={styles.activityValue}>
-                        {result.displayValue}
-                      </Text>
-                      <Text variant="labelSmall" style={styles.activityScale}>
-                        {result.scale.toUpperCase()}
-                      </Text>
-                    </View>
-                  </View>
-                </TouchableOpacity>
-              ))}
-            </Surface>
-          )}
-        </View>
-
-        {/* Quick Links */}
-        <View style={styles.quickLinks}>
-          <TouchableOpacity
-            style={styles.quickLink}
-            onPress={() => router.push("/(athlete)/profile")}
+        <View style={styles.sectionHead}>
+          <AppText variant="headline">Today</AppText>
+          <AppText
+            variant="label"
+            color={palette.blue}
+            onPress={() => router.push("/(athlete)/programs/create")}
           >
-            <Surface style={styles.quickLinkCard} elevation={1}>
-              <TrendingUp size={28} color={brandColors.thrivingGreen.DEFAULT} />
-              <Text variant="labelMedium" style={styles.quickLinkText}>
-                My PRs
-              </Text>
-            </Surface>
-          </TouchableOpacity>
+            New program
+          </AppText>
         </View>
+
+        {todaysWorkouts.length === 0 ? (
+          <HCard accent="orange">
+            <AppText variant="title">Nothing scheduled.</AppText>
+            <AppText variant="body" style={styles.cardBody}>
+              A blank page. Write a program and today’s session will land here.
+            </AppText>
+            <View style={styles.cardCta}>
+              <HButton
+                label="Write a program"
+                tone="orange"
+                icon={<PenLine size={16} color={palette.white} />}
+                onPress={() => router.push("/(athlete)/programs/create")}
+              />
+            </View>
+          </HCard>
+        ) : (
+          todaysWorkouts.map((workout) => (
+            <HCard
+              key={workout.id}
+              accent={workout.hasLogged ? "green" : "blue"}
+              onPress={() => router.push(`/(athlete)/workout/${workout.id}`)}
+            >
+              <AppText variant="eyebrow">
+                {workout.workout_type || "Session"}
+              </AppText>
+              <AppText variant="headline" style={styles.workoutTitle}>
+                {workout.title}
+              </AppText>
+              {workout.body ? (
+                <AppText
+                  variant="body"
+                  numberOfLines={2}
+                  style={styles.cardBody}
+                >
+                  {workout.body}
+                </AppText>
+              ) : null}
+              <View style={styles.cardCta}>
+                {workout.hasLogged ? (
+                  <View style={styles.doneRow}>
+                    <Check size={16} color={palette.green} />
+                    <AppText variant="label" color={palette.green}>
+                      Logged
+                    </AppText>
+                  </View>
+                ) : (
+                  <HButton
+                    label="Log it"
+                    tone="blue"
+                    onPress={() =>
+                      router.push(`/(athlete)/workout/${workout.id}`)
+                    }
+                  />
+                )}
+              </View>
+            </HCard>
+          ))
+        )}
+
+        <View style={[styles.sectionHead, { marginTop: 28 }]}>
+          <AppText variant="headline">Recent ink</AppText>
+          <AppText
+            variant="label"
+            color={palette.blue}
+            onPress={() => router.push("/(athlete)/history")}
+          >
+            Full log
+          </AppText>
+        </View>
+
+        {recentResults.length === 0 ? (
+          <HCard>
+            <AppText variant="title">The log is empty.</AppText>
+            <AppText variant="body" style={styles.cardBody}>
+              Finish a session and it shows up here — a quiet record, not a
+              leaderboard.
+            </AppText>
+          </HCard>
+        ) : (
+          <HCard padded={false}>
+            {recentResults.map((result, idx) => (
+              <View
+                key={result.id}
+                style={[
+                  styles.logRow,
+                  idx < recentResults.length - 1 && styles.logBorder,
+                ]}
+              >
+                <View style={styles.logLeft}>
+                  <AppText
+                    variant="title"
+                    onPress={() =>
+                      router.push(`/(athlete)/workout/${result.workout_id}`)
+                    }
+                  >
+                    {result.workout?.title || "Workout"}
+                    {result.is_pr ? "  ·  PR" : ""}
+                  </AppText>
+                  <AppText variant="bodySmall">
+                    {new Date(result.created_at).toLocaleDateString()}
+                  </AppText>
+                </View>
+                <View style={styles.logRight}>
+                  <AppText variant="title">{result.displayValue}</AppText>
+                  <AppText variant="eyebrow">{result.scale}</AppText>
+                </View>
+              </View>
+            ))}
+          </HCard>
+        )}
       </ScrollView>
-    </SafeAreaView>
+    </Screen>
   );
 }
 
-function formatResult(result: any) {
+function Stamp({
+  value,
+  label,
+  color,
+}: {
+  value: number;
+  label: string;
+  color: string;
+}) {
+  return (
+    <View style={[styles.stamp, { borderColor: color }]}>
+      <AppText variant="stat" color={color}>
+        {value}
+      </AppText>
+      <AppText variant="eyebrow" style={{ color }}>
+        {label}
+      </AppText>
+    </View>
+  );
+}
+
+function formatResult(result: {
+  result_type: string;
+  time_seconds: number | null;
+  rounds: number | null;
+  reps: number | null;
+  weight_kg: number | null;
+  count: number | null;
+}) {
   switch (result.result_type) {
-    case "time":
-      if (!result.time_seconds) return "-";
+    case "time": {
+      if (!result.time_seconds) return "—";
       const mins = Math.floor(result.time_seconds / 60);
       const secs = result.time_seconds % 60;
       return `${mins}:${secs.toString().padStart(2, "0")}`;
+    }
     case "rounds_reps":
       return `${result.rounds || 0} + ${result.reps || 0}`;
     case "weight":
@@ -438,222 +455,45 @@ function formatResult(result: any) {
 }
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: "#f8f9fa",
-  },
-  loadingContainer: {
-    flex: 1,
-    justifyContent: "center",
-    alignItems: "center",
-  },
-  scrollContent: {
-    padding: 16,
-    paddingBottom: 100,
-  },
-  header: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "flex-start",
-    marginBottom: 20,
-  },
-  greeting: {
-    opacity: 0.6,
-  },
-  name: {
-    fontWeight: "bold",
-  },
-  gymBadge: {
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-    borderRadius: 16,
-    backgroundColor: brandColors.smartBlue.container,
-  },
-  gymBadgeText: {
-    color: brandColors.smartBlue.DEFAULT,
-    fontWeight: "600",
-  },
-  noGymCard: {
-    padding: 32,
-    borderRadius: 16,
-    alignItems: "center",
-    backgroundColor: "#fff",
-  },
-  noGymIcon: {
-    marginBottom: 16,
-  },
-  noGymTitle: {
-    fontWeight: "bold",
-    marginBottom: 8,
-  },
-  noGymText: {
-    textAlign: "center",
-    opacity: 0.7,
-    marginBottom: 24,
-  },
-  joinButton: {
-    minWidth: 200,
-  },
-  statsRow: {
-    flexDirection: "row",
-    gap: 8,
-    marginBottom: 20,
-  },
-  statCard: {
-    flex: 1,
-    padding: 12,
-    borderRadius: 12,
-    alignItems: "center",
-    backgroundColor: "#fff",
-  },
-  statCardWarning: {
-    backgroundColor: "#fffbeb",
-  },
-  statCardSuccess: {
-    backgroundColor: "#f0fdf4",
-  },
-  statValue: {
-    fontWeight: "bold",
-    color: brandColors.smartBlue.DEFAULT,
-  },
-  statValueWarning: {
-    fontWeight: "bold",
-    color: brandColors.helpfulOrange.DEFAULT,
-  },
-  statValueSuccess: {
-    fontWeight: "bold",
-    color: brandColors.thrivingGreen.DEFAULT,
-  },
-  statLabel: {
-    marginTop: 2,
-    opacity: 0.6,
-    textAlign: "center",
-    fontSize: 10,
-  },
-  section: {
-    marginBottom: 20,
-  },
-  sectionHeader: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 8,
-    marginBottom: 12,
-  },
-  sectionTitle: {
-    fontWeight: "600",
-    flex: 1,
-  },
-  viewAll: {
-    color: brandColors.smartBlue.DEFAULT,
-    fontSize: 14,
-  },
-  workoutCard: {
-    backgroundColor: "#fff",
-    borderRadius: 12,
-    marginBottom: 8,
-  },
-  workoutRow: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
-  },
-  workoutInfo: {
-    flex: 1,
-  },
-  workoutName: {
-    fontWeight: "600",
-  },
-  workoutType: {
-    opacity: 0.6,
-  },
-  workoutDescription: {
-    marginTop: 8,
-    opacity: 0.7,
-  },
-  completedBadge: {
-    backgroundColor: brandColors.thrivingGreen.container,
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-    borderRadius: 16,
-  },
-  completedText: {
-    color: brandColors.thrivingGreen.DEFAULT,
-    fontSize: 12,
-    fontWeight: "600",
-  },
-  workoutPlaceholder: {
-    alignItems: "center",
-    paddingVertical: 24,
-  },
-  workoutPlaceholderText: {
-    marginTop: 12,
-    opacity: 0.7,
-  },
-  workoutSubtext: {
-    marginTop: 4,
-    opacity: 0.5,
-  },
-  emptyState: {
-    padding: 24,
-    borderRadius: 12,
-    alignItems: "center",
-    backgroundColor: "#fff",
-  },
-  emptyStateText: {
-    opacity: 0.7,
-  },
-  emptyStateSubtext: {
-    marginTop: 4,
-    opacity: 0.5,
-  },
-  activityList: {
-    borderRadius: 12,
-    backgroundColor: "#fff",
-    overflow: "hidden",
-  },
-  activityItem: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
-    padding: 12,
-  },
-  activityItemBorder: {
-    borderBottomWidth: 1,
-    borderBottomColor: "#f0f0f0",
-  },
-  activityInfo: {
-    flex: 1,
-  },
-  activityName: {
-    fontWeight: "500",
-  },
-  activityDate: {
-    opacity: 0.6,
-  },
-  activityResult: {
-    alignItems: "flex-end",
-  },
-  activityValue: {
-    fontWeight: "bold",
-  },
-  activityScale: {
-    opacity: 0.6,
-  },
-  quickLinks: {
-    flexDirection: "row",
+  loading: { flex: 1, justifyContent: "center", alignItems: "center" },
+  scroll: {
+    paddingHorizontal: 22,
+    paddingTop: 8,
+    paddingBottom: TAB_BAR_CLEARANCE,
     gap: 12,
   },
-  quickLink: {
+  header: { marginBottom: 8 },
+  hello: { marginTop: 6, marginBottom: 6 },
+  stamps: { flexDirection: "row", gap: 10, marginBottom: 4 },
+  stamp: {
     flex: 1,
+    borderWidth: 1.5,
+    borderRadius: 18,
+    paddingVertical: 12,
+    paddingHorizontal: 14,
+    backgroundColor: palette.paperElevated,
   },
-  quickLinkCard: {
-    padding: 20,
-    borderRadius: 12,
-    alignItems: "center",
-    backgroundColor: "#fff",
-  },
-  quickLinkText: {
+  sectionHead: {
+    flexDirection: "row",
+    alignItems: "baseline",
+    justifyContent: "space-between",
     marginTop: 8,
-    fontWeight: "500",
+    marginBottom: 4,
   },
+  workoutTitle: { marginTop: 4 },
+  cardBody: { marginTop: 8 },
+  cardCta: { marginTop: 16 },
+  doneRow: { flexDirection: "row", alignItems: "center", gap: 6 },
+  logRow: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    padding: 16,
+  },
+  logBorder: {
+    borderBottomWidth: 1,
+    borderBottomColor: palette.rule,
+  },
+  logLeft: { flex: 1, paddingRight: 12 },
+  logRight: { alignItems: "flex-end" },
 });

@@ -1,15 +1,15 @@
 import { useEffect } from "react";
-import { View, StyleSheet, Dimensions } from "react-native";
-import { Modal, Portal, Text, Button, Surface } from "react-native-paper";
+import { Dimensions, StyleSheet, View } from "react-native";
+import { Button, Modal, Portal, Surface, Text } from "react-native-paper";
 import Animated, {
-  useSharedValue,
-  useAnimatedStyle,
-  withSpring,
-  withSequence,
-  withDelay,
   runOnJS,
+  useAnimatedStyle,
+  useSharedValue,
+  withDelay,
+  withSequence,
+  withSpring,
 } from "react-native-reanimated";
-import { brandColors } from "@/app/_layout";
+import { palette } from "@/lib/theme";
 
 type Props = {
   visible: boolean;
@@ -30,7 +30,7 @@ export default function PRCelebration({ visible, prData, onClose }: Props) {
       opacity.value = withSpring(1);
       scale.value = withSequence(
         withSpring(1.1, { damping: 8, stiffness: 100 }),
-        withSpring(1, { damping: 12 })
+        withSpring(1, { damping: 12 }),
       );
 
       // Auto-close after 5 seconds
@@ -132,7 +132,7 @@ const styles = StyleSheet.create({
   },
   prText: {
     fontWeight: "bold",
-    color: brandColors.helpfulOrange.DEFAULT,
+    color: palette.orange,
     marginBottom: 8,
   },
   resultValue: {
@@ -140,7 +140,7 @@ const styles = StyleSheet.create({
     marginBottom: 8,
   },
   improvement: {
-    color: brandColors.thrivingGreen.DEFAULT,
+    color: palette.green,
     fontWeight: "600",
     marginBottom: 16,
   },
