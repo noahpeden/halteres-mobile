@@ -13,10 +13,6 @@ import { supabase } from "@/lib/supabase/client";
 type UserRole = "coach" | "athlete";
 
 type Profile = {
-  subscription_status: string | null;
-  trial_end_date: string | null;
-  generations_remaining: number | null;
-  last_generation_date: string | null;
   role: UserRole;
   display_name: string | null;
   full_name: string | null;
@@ -99,13 +95,12 @@ export function AuthProvider({ children }: PropsWithChildren) {
       const { data, error } = await supabase
         .from("profiles")
         .select(
-          `subscription_status, trial_end_date, generations_remaining, last_generation_date,
-           role, display_name, full_name, profile_photo_url, notification_preferences,
+          `role, display_name, full_name, profile_photo_url, notification_preferences,
            onboarding_completed, bench_1rm, squat_1rm, deadlift_1rm, weight_kg, height_cm, mile_time,
-           gender, recovery_score, injury_history`
+           gender, recovery_score, injury_history`,
         )
         .eq("id", userId)
-        .single();
+        .maybeSingle();
 
       if (error) {
         if (error.code === "PGRST116") {
@@ -170,7 +165,7 @@ export function AuthProvider({ children }: PropsWithChildren) {
   const signUp = async (
     email: string,
     password: string,
-    role: UserRole = "athlete"
+    role: UserRole = "athlete",
   ) => {
     const { data, error } = await supabase.auth.signUp({
       email,
@@ -187,23 +182,16 @@ export function AuthProvider({ children }: PropsWithChildren) {
         .from("profiles")
         .select("id")
         .eq("id", data.user.id)
-        .single();
+        .maybeSingle();
 
       if (!existingProfile) {
-        // Profile wasn't created by trigger - create fallback profile
+        // Profile wasn't created by trigger — match handle_new_user athlete path.
+        // Beta is free: do not write trial dates, generation credits, or Stripe status.
         console.log("Profile missing for user, creating fallback profile");
-        const now = new Date();
-        const trialEnd = new Date(now.getTime() + 7 * 24 * 60 * 60 * 1000);
 
-        // Every self-coached athlete gets a trial with generation credits
         const profileData = {
           id: data.user.id,
           role,
-          subscription_status: "trialing",
-          trial_start_date: now.toISOString(),
-          trial_end_date: trialEnd.toISOString(),
-          generations_remaining: 15,
-          generations_today: 0,
           is_active: true,
           onboarding_completed: false,
         };
@@ -219,10 +207,7 @@ export function AuthProvider({ children }: PropsWithChildren) {
         }
       } else {
         // Profile exists, just update the role if needed
-        await supabase
-          .from("profiles")
-          .update({ role })
-          .eq("id", data.user.id);
+        await supabase.from("profiles").update({ role }).eq("id", data.user.id);
       }
     }
   };
@@ -264,7 +249,15 @@ export function AuthProvider({ children }: PropsWithChildren) {
         injury_history: profile?.injury_history ?? null,
       },
     }),
-    [user, session, isLoading, profile, loadingProfile, fetchProfile, isAthlete]
+    [
+      user,
+      session,
+      isLoading,
+      profile,
+      loadingProfile,
+      fetchProfile,
+      isAthlete,
+    ],
   );
 
   return (

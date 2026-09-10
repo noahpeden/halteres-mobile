@@ -110,9 +110,6 @@ export function AIProgramWriter({ programId }: AIProgramWriterProps) {
     cancel: cancelGeneration,
   } = useTwoPhaseGeneration(programId);
 
-  // Self-coached: generation always available (no payments/subscription gating)
-  const isEligibleToGenerate = true;
-
   // State for showing skeleton preview vs workout list
   const [showSkeletonPreview, setShowSkeletonPreview] = useState(false);
 
