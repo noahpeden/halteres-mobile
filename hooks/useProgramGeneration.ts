@@ -1,8 +1,9 @@
 import { useState, useRef, useCallback } from "react";
-import { supabase } from "@/lib/supabase/client";
+import { athleteFacingError } from "@/lib/api/athleteFacingError";
+import { API_BASE } from "@/lib/api/getApiUrl";
 import { createSSEClientWithPost } from "@/lib/api/sseClient";
 import { equipmentList, dayNameToNumber } from "@/lib/constants/programConfig";
-import { API_BASE } from "@/lib/api/getApiUrl";
+import { supabase } from "@/lib/supabase/client";
 
 // Debug: Log the resolved API URL
 console.log("[Generation] Resolved API_BASE:", API_BASE);
@@ -308,8 +309,12 @@ export function useProgramGeneration(programId: string) {
       }
 
       // Failed after retries
+      const errorMsg = athleteFacingError(
+        lastError?.message,
+        "Generation failed",
+      );
       setStage("error");
-      setError(lastError?.message || "Generation failed");
+      setError(errorMsg);
       if (timerRef.current) {
         clearInterval(timerRef.current);
       }
@@ -318,7 +323,7 @@ export function useProgramGeneration(programId: string) {
       return {
         success: false,
         workoutsCreated: 0,
-        error: lastError?.message,
+        error: errorMsg,
       };
     },
     [programId, addStreamingWorkout, clearStreamingWorkouts],

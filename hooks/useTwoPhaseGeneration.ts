@@ -1,4 +1,5 @@
 import { useCallback, useRef, useState } from "react";
+import { athleteFacingError } from "@/lib/api/athleteFacingError";
 import { API_BASE } from "@/lib/api/getApiUrl";
 import { createSSEClientWithPost } from "@/lib/api/sseClient";
 import { dayNameToNumber, equipmentList } from "@/lib/constants/programConfig";
@@ -308,14 +309,18 @@ export function useTwoPhaseGeneration(programId: string) {
       }
 
       // Failed
+      const errorMsg = athleteFacingError(
+        lastError?.message,
+        "Skeleton generation failed",
+      );
       setStage("error");
-      setError(lastError?.message || "Skeleton generation failed");
+      setError(errorMsg);
       stopTimer();
 
       return {
         success: false,
         workoutsCreated: 0,
-        error: lastError?.message,
+        error: errorMsg,
         stage: "error",
       };
     },
@@ -443,8 +448,10 @@ export function useTwoPhaseGeneration(programId: string) {
           stage: "skeleton_complete",
         };
       } catch (err) {
-        const errorMsg =
-          err instanceof Error ? err.message : "Enhancement failed";
+        const errorMsg = athleteFacingError(
+          err instanceof Error ? err.message : null,
+          "Enhancement failed",
+        );
         setStage("error");
         setError(errorMsg);
         setEnhancingWeek(null);

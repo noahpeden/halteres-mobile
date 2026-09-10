@@ -1,6 +1,7 @@
-import { useState, useCallback } from "react";
-import { supabase } from "@/lib/supabase/client";
+import { useCallback, useState } from "react";
+import { athleteFacingError } from "@/lib/api/athleteFacingError";
 import { API_BASE } from "@/lib/api/getApiUrl";
+import { supabase } from "@/lib/supabase/client";
 
 export type EnhancedWorkout = {
   id: string;
@@ -42,7 +43,11 @@ export function useEnhanceProgram() {
           throw new Error("Not authenticated");
         }
 
-        console.log("[Enhance] Starting enhancement with", payload.workouts.length, "workouts");
+        console.log(
+          "[Enhance] Starting enhancement with",
+          payload.workouts.length,
+          "workouts",
+        );
 
         const response = await fetch(`${API_BASE}/api/enhance-program`, {
           method: "POST",
@@ -66,7 +71,10 @@ export function useEnhanceProgram() {
           notes: data.enhancedProgram.notes || "",
         };
       } catch (err) {
-        const message = err instanceof Error ? err.message : "Unknown error";
+        const message = athleteFacingError(
+          err instanceof Error ? err.message : null,
+          "Failed to enhance program",
+        );
         console.error("[Enhance] Error:", message);
         setError(message);
         return null;
@@ -80,7 +88,11 @@ export function useEnhanceProgram() {
   const saveEnhancedWorkouts = useCallback(
     async (enhancedWorkouts: EnhancedWorkout[]): Promise<boolean> => {
       try {
-        console.log("[Enhance] Saving", enhancedWorkouts.length, "enhanced workouts");
+        console.log(
+          "[Enhance] Saving",
+          enhancedWorkouts.length,
+          "enhanced workouts",
+        );
 
         // Update each workout in the database
         for (const workout of enhancedWorkouts) {
@@ -94,7 +106,11 @@ export function useEnhanceProgram() {
             .eq("id", workout.id);
 
           if (updateError) {
-            console.error("[Enhance] Error updating workout:", workout.id, updateError);
+            console.error(
+              "[Enhance] Error updating workout:",
+              workout.id,
+              updateError,
+            );
             throw updateError;
           }
         }
