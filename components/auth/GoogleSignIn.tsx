@@ -4,6 +4,7 @@ import { useState } from "react";
 import { Alert, StyleSheet, View } from "react-native";
 import { Button, Text } from "react-native-paper";
 import Svg, { Path } from "react-native-svg";
+import { SHOW_GOOGLE_SIGN_IN } from "@/lib/auth/socialAuth";
 import { supabase } from "@/lib/supabase/client";
 
 // Complete any pending auth sessions
@@ -17,6 +18,10 @@ const redirectUri = AuthSession.makeRedirectUri({
 
 export function GoogleSignIn() {
   const [isLoading, setIsLoading] = useState(false);
+
+  if (!SHOW_GOOGLE_SIGN_IN) {
+    return null;
+  }
 
   const handleGoogleSignIn = async () => {
     try {
