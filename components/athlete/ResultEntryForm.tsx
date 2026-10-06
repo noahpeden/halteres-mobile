@@ -10,6 +10,11 @@ import {
 } from "react-native-paper";
 import { supabase } from "@/lib/supabase/client";
 import { palette } from "@/lib/theme";
+import {
+  buildSimpleResultWrite,
+  friendlyWorkoutResultError,
+  upsertWorkoutResult,
+} from "@/lib/workoutResults/upsertWorkoutResult";
 
 type ResultType =
   | "time"
@@ -20,14 +25,68 @@ type ResultType =
   | "calories";
 type Scale = "rx" | "scaled" | "rx_plus";
 
+export type ExistingWorkoutResult = {
+  result_type?: string | null;
+  time_seconds?: number | null;
+  rounds?: number | null;
+  reps?: number | null;
+  weight_kg?: number | null;
+  count?: number | null;
+  scale?: string | null;
+  modifications?: string | null;
+  notes?: string | null;
+  perceived_effort?: number | null;
+};
+
+type ResultLike = {
+  result_type?: string | null;
+  time_seconds?: number | null;
+  rounds?: number | null;
+  reps?: number | null;
+  weight_kg?: number | null;
+  count?: number | null;
+};
+
 type Props = {
   workoutId: string;
   gymId?: string;
   workoutTitle?: string;
-  onSuccess?: (result: any, isPR: boolean, prData: any) => void;
+  existingResult?: ExistingWorkoutResult | null;
+  onSuccess?: (
+    result: Record<string, unknown>,
+    isPR: boolean,
+    prData: { displayValue: string } | null,
+  ) => void;
   onCancel?: () => void;
   defaultResultType?: ResultType;
 };
+
+function asResultType(value: string | null | undefined): ResultType | null {
+  if (
+    value === "time" ||
+    value === "rounds_reps" ||
+    value === "weight" ||
+    value === "reps" ||
+    value === "distance" ||
+    value === "calories"
+  ) {
+    return value;
+  }
+  return null;
+}
+
+function asScale(value: string | null | undefined): Scale {
+  if (value === "scaled" || value === "rx_plus") return value;
+  return "rx";
+}
+
+function seedTimeParts(totalSeconds: number | null | undefined) {
+  if (!totalSeconds) return { minutes: "", seconds: "" };
+  return {
+    minutes: String(Math.floor(totalSeconds / 60)),
+    seconds: String(totalSeconds % 60),
+  };
+}
 
 const RESULT_TYPES: { value: ResultType; label: string }[] = [
   { value: "time", label: "Time" },
@@ -40,25 +99,42 @@ export default function ResultEntryForm({
   workoutId,
   gymId,
   workoutTitle,
+  existingResult,
   onSuccess,
   onCancel,
   defaultResultType = "time",
 }: Props) {
-  const [resultType, setResultType] = useState<ResultType>(defaultResultType);
-  const [scale, setScale] = useState<Scale>("rx");
+  const seededType =
+    asResultType(existingResult?.result_type) ?? defaultResultType;
+  const seededTime = seedTimeParts(existingResult?.time_seconds);
+  const [resultType, setResultType] = useState<ResultType>(seededType);
+  const [scale, setScale] = useState<Scale>(asScale(existingResult?.scale));
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   // Result values
-  const [minutes, setMinutes] = useState("");
-  const [seconds, setSeconds] = useState("");
-  const [rounds, setRounds] = useState("");
-  const [reps, setReps] = useState("");
-  const [weight, setWeight] = useState("");
-  const [count, setCount] = useState("");
-  const [modifications, setModifications] = useState("");
-  const [notes, setNotes] = useState("");
-  const [perceivedEffort, setPerceivedEffort] = useState<number | null>(null);
+  const [minutes, setMinutes] = useState(seededTime.minutes);
+  const [seconds, setSeconds] = useState(seededTime.seconds);
+  const [rounds, setRounds] = useState(
+    existingResult?.rounds != null ? String(existingResult.rounds) : "",
+  );
+  const [reps, setReps] = useState(
+    existingResult?.reps != null ? String(existingResult.reps) : "",
+  );
+  const [weight, setWeight] = useState(
+    existingResult?.weight_kg != null ? String(existingResult.weight_kg) : "",
+  );
+  const [count, setCount] = useState(
+    existingResult?.count != null ? String(existingResult.count) : "",
+  );
+  const [modifications, setModifications] = useState(
+    existingResult?.modifications ?? "",
+  );
+  const [notes, setNotes] = useState(existingResult?.notes ?? "");
+  const [perceivedEffort, setPerceivedEffort] = useState<number | null>(
+    existingResult?.perceived_effort ?? null,
+  );
+  const isEditing = Boolean(existingResult);
 
   const handleSubmit = async () => {
     setLoading(true);
@@ -70,33 +146,27 @@ export default function ResultEntryForm({
       } = await supabase.auth.getUser();
       if (!user) throw new Error("Not authenticated");
 
-      const resultData: any = {
-        user_id: user.id,
-        workout_id: workoutId,
-        gym_id: gymId || null,
-        result_type: resultType,
-        scale,
-        modifications: scale === "scaled" ? modifications : null,
-        notes,
-        perceived_effort: perceivedEffort,
-      };
+      let timeSeconds: number | null = null;
+      let roundsValue: number | null = null;
+      let repsValue: number | null = null;
+      let weightKg: number | null = null;
+      let countValue: number | null = null;
 
-      // Add type-specific values
       switch (resultType) {
         case "time": {
           const totalSeconds =
-            (parseInt(minutes) || 0) * 60 + (parseInt(seconds) || 0);
+            (parseInt(minutes, 10) || 0) * 60 + (parseInt(seconds, 10) || 0);
           if (totalSeconds === 0) {
             setError("Please enter a valid time");
             setLoading(false);
             return;
           }
-          resultData.time_seconds = totalSeconds;
+          timeSeconds = totalSeconds;
           break;
         }
         case "rounds_reps":
-          resultData.rounds = parseInt(rounds) || 0;
-          resultData.reps = parseInt(reps) || 0;
+          roundsValue = parseInt(rounds, 10) || 0;
+          repsValue = parseInt(reps, 10) || 0;
           break;
         case "weight":
           if (!weight) {
@@ -104,7 +174,7 @@ export default function ResultEntryForm({
             setLoading(false);
             return;
           }
-          resultData.weight_kg = parseFloat(weight);
+          weightKg = parseFloat(weight);
           break;
         case "reps":
         case "distance":
@@ -114,31 +184,35 @@ export default function ResultEntryForm({
             setLoading(false);
             return;
           }
-          resultData.count = parseInt(count);
+          countValue = parseInt(count, 10);
           break;
       }
 
-      const { data: result, error: insertError } = await supabase
-        .from("workout_results")
-        .insert([resultData])
-        .select()
-        .single();
+      const resultData = buildSimpleResultWrite({
+        userId: user.id,
+        workoutId,
+        gymId,
+        resultType,
+        scale,
+        modifications,
+        notes,
+        perceivedEffort,
+        timeSeconds,
+        rounds: roundsValue,
+        reps: repsValue,
+        weightKg,
+        count: countValue,
+      });
 
-      if (insertError) throw insertError;
+      const { data: result, created } = await upsertWorkoutResult(
+        supabase,
+        resultData,
+      );
 
-      // Check for PR (simplified version)
-      const { data: previousResults } = await supabase
-        .from("workout_results")
-        .select("*")
-        .eq("user_id", user.id)
-        .eq("workout_id", workoutId)
-        .eq("scale", scale)
-        .neq("id", result.id)
-        .is("deleted_at", null);
+      // First completion for this user+workout is a PR. Edits stay on the same row.
+      const isPR = created;
 
-      const isPR = !previousResults || previousResults.length === 0;
-
-      if (isPR) {
+      if (isPR && result.id) {
         await supabase
           .from("workout_results")
           .update({ is_pr: true, pr_type: "workout_pr" })
@@ -149,21 +223,22 @@ export default function ResultEntryForm({
         onSuccess(
           result,
           isPR,
-          isPR ? { displayValue: formatResult(result) } : null,
+          isPR ? { displayValue: formatResult(result as ResultLike) } : null,
         );
       }
-    } catch (err: any) {
-      setError(err.message);
+    } catch (err: unknown) {
+      setError(friendlyWorkoutResultError(err));
     } finally {
       setLoading(false);
     }
   };
 
-  const formatResult = (result: any) => {
+  const formatResult = (result: ResultLike) => {
     switch (result.result_type) {
       case "time": {
-        const mins = Math.floor(result.time_seconds / 60);
-        const secs = result.time_seconds % 60;
+        const total = result.time_seconds || 0;
+        const mins = Math.floor(total / 60);
+        const secs = total % 60;
         return `${mins}:${secs.toString().padStart(2, "0")}`;
       }
       case "rounds_reps":
@@ -377,7 +452,7 @@ export default function ResultEntryForm({
           disabled={loading}
           style={[styles.button, styles.submitButton]}
         >
-          Log it
+          {isEditing ? "Save" : "Log it"}
         </Button>
       </View>
     </ScrollView>

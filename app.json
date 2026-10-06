@@ -13,18 +13,11 @@
       "resizeMode": "contain",
       "backgroundColor": "#F4EFE6"
     },
-    "assetBundlePatterns": [
-      "**/*"
-    ],
+    "assetBundlePatterns": ["**/*"],
     "ios": {
       "supportsTablet": true,
       "bundleIdentifier": "ai.halteres",
       "buildNumber": "1",
-      "infoPlist": {
-        "NSCameraUsageDescription": "Halteres needs camera access to let you take photos for your workout logs and profile.",
-        "NSPhotoLibraryUsageDescription": "Halteres needs photo library access to let you add images to your workout logs and profile.",
-        "NSPhotoLibraryAddUsageDescription": "Halteres needs permission to save photos to your library."
-      },
       "config": {
         "usesNonExemptEncryption": false
       }
@@ -35,12 +28,7 @@
       "adaptiveIcon": {
         "foregroundImage": "./assets/adaptive-icon.png",
         "backgroundColor": "#F4EFE6"
-      },
-      "permissions": [
-        "CAMERA",
-        "READ_EXTERNAL_STORAGE",
-        "WRITE_EXTERNAL_STORAGE"
-      ]
+      }
     },
     "plugins": [
       "expo-router",

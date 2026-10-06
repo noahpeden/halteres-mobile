@@ -12,7 +12,6 @@ import {
   ActivityIndicator,
   Button,
   Chip,
-  IconButton,
   Surface,
   Text,
 } from "react-native-paper";
@@ -60,8 +59,52 @@ type UserResult = {
   is_pr: boolean;
   modifications: string | null;
   notes: string | null;
+  perceived_effort?: number | null;
   displayValue: string;
 };
+
+type ResultLike = {
+  result_type?: string | null;
+  time_seconds?: number | null;
+  rounds?: number | null;
+  reps?: number | null;
+  weight_kg?: number | null;
+  count?: number | null;
+};
+
+function formatResult(result: ResultLike): string {
+  switch (result.result_type) {
+    case "time": {
+      if (!result.time_seconds) return "-";
+      const mins = Math.floor(result.time_seconds / 60);
+      const secs = result.time_seconds % 60;
+      return `${mins}:${secs.toString().padStart(2, "0")}`;
+    }
+    case "rounds_reps":
+      return `${result.rounds || 0} + ${result.reps || 0}`;
+    case "weight":
+      return `${result.weight_kg || 0} kg`;
+    default:
+      return `${result.count || 0}`;
+  }
+}
+
+function getDefaultResultType(
+  workoutType: string | null | undefined,
+): "time" | "rounds_reps" | "weight" {
+  switch (workoutType?.toLowerCase()) {
+    case "amrap":
+      return "rounds_reps";
+    case "for time":
+    case "time":
+      return "time";
+    case "max weight":
+    case "strength":
+      return "weight";
+    default:
+      return "time";
+  }
+}
 
 export default function WorkoutDetailScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
@@ -74,7 +117,7 @@ export default function WorkoutDetailScreen() {
   const [refreshing, setRefreshing] = useState(false);
   const [activeTab, setActiveTab] = useState<Tab>("workout");
   const [showPRCelebration, setShowPRCelebration] = useState(false);
-  const [prData, setPrData] = useState<any>(null);
+  const [prData, setPrData] = useState<{ displayValue?: string } | null>(null);
 
   // TV Display Mode - Parse sections from workout description
   const sections = useMemo(
@@ -98,7 +141,7 @@ export default function WorkoutDetailScreen() {
         .single();
 
       if (workoutError) throw workoutError;
-      setWorkout(workoutData);
+      setWorkout(workoutData as Workout);
 
       // Fetch user's result for this workout
       const { data: resultData } = await supabase
@@ -134,48 +177,14 @@ export default function WorkoutDetailScreen() {
     fetchWorkoutData();
   };
 
-  const formatResult = (result: any): string => {
-    switch (result.result_type) {
-      case "time": {
-        if (!result.time_seconds) return "-";
-        const mins = Math.floor(result.time_seconds / 60);
-        const secs = result.time_seconds % 60;
-        return `${mins}:${secs.toString().padStart(2, "0")}`;
-      }
-      case "rounds_reps":
-        return `${result.rounds || 0} + ${result.reps || 0}`;
-      case "weight":
-        return `${result.weight_kg || 0} kg`;
-      default:
-        return `${result.count || 0}`;
-    }
-  };
-
-  const getDefaultResultType = (
-    workoutType: string | null | undefined,
-  ): string => {
-    switch (workoutType?.toLowerCase()) {
-      case "amrap":
-        return "rounds_reps";
-      case "for time":
-      case "time":
-        return "time";
-      case "max weight":
-      case "strength":
-        return "weight";
-      default:
-        return "time";
-    }
-  };
-
-  const handleResultSuccess = async (
-    result: any,
+  const handleResultSuccess = (
+    result: Record<string, unknown>,
     isPR: boolean,
-    prInfo: any,
+    prInfo: { displayValue: string } | null,
   ) => {
     setUserResult({
-      ...result,
-      displayValue: formatResult(result),
+      ...(result as UserResult),
+      displayValue: formatResult(result as ResultLike),
     });
 
     if (isPR && prInfo) {
@@ -193,7 +202,7 @@ export default function WorkoutDetailScreen() {
           userId: user?.id,
         }),
       }).catch(() => {}); // Fire and forget
-    } catch (e) {
+    } catch {
       // Silently fail - feedback generation is non-critical
     }
   };
@@ -415,13 +424,12 @@ export default function WorkoutDetailScreen() {
       {activeTab === "log" && (
         <View style={styles.formContainer}>
           <ResultEntryForm
-            workoutId={id!}
+            workoutId={id ?? ""}
             workoutTitle={workout.title}
+            existingResult={userResult}
             onSuccess={handleResultSuccess}
             onCancel={() => setActiveTab("workout")}
-            defaultResultType={
-              getDefaultResultType(workout.workout_type) as any
-            }
+            defaultResultType={getDefaultResultType(workout.workout_type)}
           />
         </View>
       )}
